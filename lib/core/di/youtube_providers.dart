@@ -37,5 +37,6 @@ final playTrackProvider = Provider((ref) {
     );
 
     await handler.playTrack(mediaItem, uri);
+    handler.recordPlay(track);
   };
 });

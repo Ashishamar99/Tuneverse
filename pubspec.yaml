@@ -43,6 +43,9 @@ dependencies:
   # Secure secrets at runtime
   flutter_secure_storage: ^9.2.2
 
+  # Audio session (headphone disconnect, audio focus)
+  audio_session: ^0.1.21
+
   # Permissions
   permission_handler: ^11.3.1
 

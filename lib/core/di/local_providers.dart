@@ -41,5 +41,6 @@ final playLocalTrackProvider = Provider((ref) {
     );
 
     await handler.playTrack(mediaItem, uri);
+    handler.recordPlay(track);
   };
 });

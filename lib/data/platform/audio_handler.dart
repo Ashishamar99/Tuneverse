@@ -1,11 +1,18 @@
 import 'package:audio_service/audio_service.dart';
+import 'package:isar/isar.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:tuneverse/data/models/track_entity.dart';
+import 'package:tuneverse/domain/entities/track.dart';
 
 class TuneVerseAudioHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
   final AudioPlayer _player = AudioPlayer();
+  final Isar _isar;
 
-  TuneVerseAudioHandler() {
+  static const _recentId = 'recent';
+  static const _libraryId = 'library';
+
+  TuneVerseAudioHandler(this._isar) {
     _player.playbackEventStream.listen((event) {
       playbackState.add(_transformEvent(event));
     });
@@ -20,6 +27,88 @@ class TuneVerseAudioHandler extends BaseAudioHandler
       }
     });
   }
+
+  // --- Android Auto content tree ---
+
+  @override
+  Future<List<MediaItem>> getChildren(String parentMediaId,
+      [Map<String, dynamic>? options]) async {
+    switch (parentMediaId) {
+      case AudioService.browsableRootId:
+        return [
+          const MediaItem(
+            id: _recentId,
+            title: 'Recently Played',
+            playable: false,
+          ),
+          const MediaItem(
+            id: _libraryId,
+            title: 'Library',
+            playable: false,
+          ),
+        ];
+      case _recentId:
+        return _recentTracks();
+      case _libraryId:
+        return _libraryTracks();
+      default:
+        return [];
+    }
+  }
+
+  Future<List<MediaItem>> _recentTracks() async {
+    final entities = await _isar.trackEntitys
+        .filter()
+        .lastPlayedAtIsNotNull()
+        .sortByLastPlayedAtDesc()
+        .limit(30)
+        .findAll();
+    return entities.map(_entityToMediaItem).toList();
+  }
+
+  Future<List<MediaItem>> _libraryTracks() async {
+    final entities = await _isar.trackEntitys
+        .filter()
+        .sourceTypeEqualTo(TrackSourceType.local)
+        .sortByTitle()
+        .limit(100)
+        .findAll();
+    return entities.map(_entityToMediaItem).toList();
+  }
+
+  MediaItem _entityToMediaItem(TrackEntity e) {
+    Uri? artUri;
+    if (e.artworkUrl != null && e.artworkUrl!.startsWith('http')) {
+      artUri = Uri.tryParse(e.artworkUrl!);
+    }
+    return MediaItem(
+      id: '${e.sourceType.name}:${e.sourceId}',
+      title: e.title,
+      artist: e.artist,
+      album: e.album,
+      duration: e.durationMs != null
+          ? Duration(milliseconds: e.durationMs!)
+          : null,
+      artUri: artUri,
+    );
+  }
+
+  // --- Stamp play history for Android Auto "Recently Played" ---
+
+  void recordPlay(Track track) {
+    _isar.writeTxn(() async {
+      final entity = await _isar.trackEntitys
+          .getBySourceIdSourceType(track.sourceId, track.sourceType);
+      if (entity != null) {
+        entity
+          ..playCount += 1
+          ..lastPlayedAt = DateTime.now();
+        await _isar.trackEntitys.put(entity);
+      }
+    });
+  }
+
+  // --- Playback controls ---
 
   @override
   Future<void> play() => _player.play();
