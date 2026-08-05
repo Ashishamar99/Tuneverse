@@ -20,7 +20,7 @@ class AppTheme {
   static double get radiusArt => 32;
 
   static ThemeData dark(Color accentColor) {
-    final cs = ColorScheme.dark().copyWith(
+    final cs = const ColorScheme.dark().copyWith(
       primary: accentColor,
       onPrimary: contrastColor(accentColor),
       primaryContainer: accentColor.withValues(alpha: 0.15),

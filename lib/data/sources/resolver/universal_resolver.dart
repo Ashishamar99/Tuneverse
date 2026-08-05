@@ -9,10 +9,9 @@ class UniversalResolver {
   final AmazonFetcher _amazon = AmazonFetcher();
 
   UniversalResolver({
-    required YouTubeSource youtube,
-    SpotifyFetcher? spotify,
-  })  : _youtube = youtube,
-        _spotify = spotify;
+    required this._youtube,
+    this._spotify,
+  });
 
   Future<List<Track>> resolve(String url) async {
     final parsed = LinkParser.parse(url);

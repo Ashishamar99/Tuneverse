@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:tuneverse/data/sources/resolver/link_parser.dart';
 
 class TrackMetadata {
   final String title;
