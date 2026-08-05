@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tuneverse/core/router/app_router.dart';
+import 'package:tuneverse/core/theme/app_theme.dart';
+import 'package:tuneverse/presentation/shared/widgets/mini_player.dart';
 
 class ScaffoldWithNav extends StatelessWidget {
   final Widget child;
@@ -31,30 +33,37 @@ class ScaffoldWithNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final index = _locationToIndex(context);
     return Scaffold(
+      backgroundColor: AppTheme.background,
       body: child,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: index,
-        onDestinationSelected: (i) => _onDestinationSelected(context, i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.search_outlined),
-            selectedIcon: Icon(Icons.search_rounded),
-            label: 'Search',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.library_music_outlined),
-            selectedIcon: Icon(Icons.library_music_rounded),
-            label: 'Library',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const MiniPlayer(),
+          NavigationBar(
+            selectedIndex: index,
+            onDestinationSelected: (i) => _onDestinationSelected(context, i),
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home_rounded),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.search_outlined),
+                selectedIcon: Icon(Icons.search_rounded),
+                label: 'Search',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.library_music_outlined),
+                selectedIcon: Icon(Icons.library_music_rounded),
+                label: 'Library',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline_rounded),
+                selectedIcon: Icon(Icons.person_rounded),
+                label: 'Profile',
+              ),
+            ],
           ),
         ],
       ),
