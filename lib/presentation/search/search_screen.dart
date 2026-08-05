@@ -3,8 +3,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuneverse/core/constants/app_constants.dart';
+import 'package:tuneverse/core/di/download_providers.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
+import 'package:tuneverse/data/services/download_manager.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -134,37 +136,40 @@ class _TrackTile extends ConsumerWidget {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: SizedBox(
-          width: 52,
-          height: 52,
-          child: track.artworkUrl != null
-              ? CachedNetworkImage(
-                  imageUrl: track.artworkUrl!,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
+      leading: Hero(
+        tag: 'album-art-${track.sourceId}',
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            width: 52,
+            height: 52,
+            child: track.artworkUrl != null
+                ? CachedNetworkImage(
+                    imageUrl: track.artworkUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(
+                      color: AppTheme.surfaceElevated,
+                      child: const Icon(
+                        Icons.music_note_rounded,
+                        color: AppTheme.onDarkSecondary,
+                      ),
+                    ),
+                    errorWidget: (_, __, ___) => Container(
+                      color: AppTheme.surfaceElevated,
+                      child: const Icon(
+                        Icons.music_note_rounded,
+                        color: AppTheme.onDarkSecondary,
+                      ),
+                    ),
+                  )
+                : Container(
                     color: AppTheme.surfaceElevated,
                     child: const Icon(
                       Icons.music_note_rounded,
                       color: AppTheme.onDarkSecondary,
                     ),
                   ),
-                  errorWidget: (_, __, ___) => Container(
-                    color: AppTheme.surfaceElevated,
-                    child: const Icon(
-                      Icons.music_note_rounded,
-                      color: AppTheme.onDarkSecondary,
-                    ),
-                  ),
-                )
-              : Container(
-                  color: AppTheme.surfaceElevated,
-                  child: const Icon(
-                    Icons.music_note_rounded,
-                    color: AppTheme.onDarkSecondary,
-                  ),
-                ),
+          ),
         ),
       ),
       title: Text(
@@ -188,16 +193,64 @@ class _TrackTile extends ConsumerWidget {
           fontSize: 13,
         ),
       ),
-      trailing: Text(
-        _formatDuration(track.durationMs),
-        style: const TextStyle(
-          color: AppTheme.onDarkSecondary,
-          fontSize: 13,
-        ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _formatDuration(track.durationMs),
+            style: const TextStyle(
+              color: AppTheme.onDarkSecondary,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(width: 4),
+          _DownloadButton(track: track),
+        ],
       ),
       onTap: () {
         ref.read(playTrackProvider)(track);
       },
+    );
+  }
+}
+
+class _DownloadButton extends ConsumerWidget {
+  final Track track;
+  const _DownloadButton({required this.track});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final downloaded = ref.watch(isDownloadedProvider(track.sourceId));
+    if (downloaded) {
+      return const Icon(
+        Icons.download_done_rounded,
+        color: AppTheme.onDarkSecondary,
+        size: 20,
+      );
+    }
+
+    final progress = ref.watch(downloadProgressProvider).valueOrNull;
+    final isThisTrack = progress?.trackId == track.sourceId;
+
+    if (isThisTrack && progress!.status == DownloadStatus.downloading) {
+      return SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(
+          value: progress.progress > 0 ? progress.progress : null,
+          strokeWidth: 2,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () => ref.read(startDownloadProvider)(track),
+      child: const Icon(
+        Icons.download_rounded,
+        color: AppTheme.onDarkSecondary,
+        size: 20,
+      ),
     );
   }
 }

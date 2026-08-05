@@ -79,23 +79,26 @@ class PlayerScreen extends ConsumerWidget {
                 // Album art
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 40),
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppTheme.radiusArt),
-                      child: track.artworkUrl != null
-                          ? CachedNetworkImage(
-                              imageUrl: track.artworkUrl!,
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              color: AppTheme.surfaceElevated,
-                              child: const Icon(
-                                Icons.music_note_rounded,
-                                color: AppTheme.onDarkSecondary,
-                                size: 64,
+                  child: Hero(
+                    tag: 'album-art-${track.sourceId}',
+                    child: AspectRatio(
+                      aspectRatio: 1,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusArt),
+                        child: track.artworkUrl != null
+                            ? CachedNetworkImage(
+                                imageUrl: track.artworkUrl!,
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                color: AppTheme.surfaceElevated,
+                                child: const Icon(
+                                  Icons.music_note_rounded,
+                                  color: AppTheme.onDarkSecondary,
+                                  size: 64,
+                                ),
                               ),
-                            ),
+                      ),
                     ),
                   ),
                 ),

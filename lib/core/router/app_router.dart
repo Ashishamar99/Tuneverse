@@ -52,14 +52,20 @@ final appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       path: AppRoutes.player,
       pageBuilder: (context, state) => CustomTransitionPage(
+        transitionDuration: const Duration(milliseconds: 400),
+        reverseTransitionDuration: const Duration(milliseconds: 350),
         child: const PlayerScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: animation.drive(
-              Tween(begin: const Offset(0, 1), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeOutCubic)),
-            ),
-            child: child,
+          final slide = Tween(begin: const Offset(0, 0.12), end: Offset.zero)
+              .chain(CurveTween(curve: Curves.easeOutCubic))
+              .animate(animation);
+          final fade = CurvedAnimation(
+            parent: animation,
+            curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+          );
+          return FadeTransition(
+            opacity: fade,
+            child: SlideTransition(position: slide, child: child),
           );
         },
       ),

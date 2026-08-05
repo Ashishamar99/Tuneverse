@@ -26,7 +26,12 @@ final playTrackProvider = Provider((ref) {
 
     ref.read(nowPlayingProvider.notifier).state = track;
 
-    final uri = await youtube.getStreamUri(track);
+    final Uri uri;
+    if (track.localPath != null && track.isDownloaded) {
+      uri = Uri.file(track.localPath!);
+    } else {
+      uri = await youtube.getStreamUri(track);
+    }
 
     final mediaItem = MediaItem(
       id: track.sourceId,

@@ -33,24 +33,27 @@ class MiniPlayer extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
               child: Row(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: SizedBox(
-                      width: 44,
-                      height: 44,
-                      child: track.artworkUrl != null
-                          ? CachedNetworkImage(
-                              imageUrl: track.artworkUrl!,
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              color: AppTheme.surface,
-                              child: const Icon(
-                                Icons.music_note_rounded,
-                                color: AppTheme.onDarkSecondary,
-                                size: 20,
+                  Hero(
+                    tag: 'album-art-${track.sourceId}',
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: track.artworkUrl != null
+                            ? CachedNetworkImage(
+                                imageUrl: track.artworkUrl!,
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                color: AppTheme.surface,
+                                child: const Icon(
+                                  Icons.music_note_rounded,
+                                  color: AppTheme.onDarkSecondary,
+                                  size: 20,
+                                ),
                               ),
-                            ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
