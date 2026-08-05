@@ -1,0 +1,78 @@
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.iml
+*.g.dart
+*.freezed.dart
+*.gr.dart
+
+# Isar generated
+*.isarschema
+
+# Secrets — NEVER COMMIT
+lib/config/secrets.dart
+*.env
+.env.*
+*.pem
+*.keystore
+*.jks
+google-services.json
+GoogleService-Info.plist
+
+# Android
+android/local.properties
+android/.gradle
+android/captures/
+android/key.properties
+**/android/**/gradle-wrapper.jar
+**/android/**/.gradle
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+
+# iOS
+ios/.dart_tool/
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/app.zip
+ios/Flutter/flutter_assets/
+ios/.symlinks/
+ios/Pods/
+
+# macOS
+macos/.dart_tool/
+macos/Flutter/ephemeral/
+
+# Linux
+linux/.dart_tool/
+linux/flutter/ephemeral/
+
+# Windows
+windows/.dart_tool/
+windows/flutter/ephemeral/
+
+# Web
+lib/generated_plugin_registrant.dart
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Pub
+pubspec.lock
+.pub/
+
+# Test / Coverage
+coverage/
+test/.test_coverage.dart
+
+# Claude
+.claude/
+.remember/
