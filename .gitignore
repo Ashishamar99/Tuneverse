@@ -5,12 +5,8 @@
 .packages
 build/
 *.iml
-*.g.dart
 *.freezed.dart
 *.gr.dart
-
-# Isar generated
-*.isarschema
 
 # Secrets — NEVER COMMIT
 lib/config/secrets.dart

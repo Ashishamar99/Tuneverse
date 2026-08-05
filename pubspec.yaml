@@ -1,0 +1,71 @@
+name: tuneverse
+description: A music super-app — play any link, any file, one player.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.12.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Audio engine
+  just_audio: ^0.9.40
+  audio_service: ^0.18.15
+  just_audio_background: ^0.0.1-beta.12
+
+  # YouTube source
+  youtube_explode_dart: ^2.3.4
+
+  # Local media (Android MediaStore)
+  on_audio_query: ^2.9.0
+
+  # Database
+  isar: ^3.1.0+1
+  isar_flutter_libs: ^3.1.0+1
+  path_provider: ^2.1.4
+
+  # State management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation + deep links
+  go_router: ^14.3.0
+
+  # Dynamic theming
+  palette_generator: ^0.3.3+3
+
+  # Networking + downloads
+  dio: ^5.7.0
+  cached_network_image: ^3.4.1
+
+  # Secure secrets at runtime
+  flutter_secure_storage: ^9.2.2
+
+  # Permissions
+  permission_handler: ^11.3.1
+
+  # Audio visualiser
+  audio_visualizer: ^1.0.0
+
+  # Utilities
+  equatable: ^2.0.5
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+  # Code generation (Isar schema only)
+  isar_generator: ^3.1.0+1
+  build_runner: ^2.4.12
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - lib/config/
