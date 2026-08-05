@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tuneverse/core/di/resolver_providers.dart';
+import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/presentation/home/home_screen.dart';
 import 'package:tuneverse/presentation/library/library_screen.dart';
 import 'package:tuneverse/presentation/player/player_screen.dart';
@@ -74,17 +77,67 @@ final appRouter = GoRouter(
   ],
 );
 
-class ResolveRedirectScreen extends StatelessWidget {
+class ResolveRedirectScreen extends ConsumerStatefulWidget {
   final String url;
   const ResolveRedirectScreen({super.key, required this.url});
 
   @override
+  ConsumerState<ResolveRedirectScreen> createState() =>
+      _ResolveRedirectScreenState();
+}
+
+class _ResolveRedirectScreenState extends ConsumerState<ResolveRedirectScreen> {
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  Future<void> _resolve() async {
+    try {
+      final resolver = ref.read(universalResolverProvider);
+      final tracks = await resolver.resolve(widget.url);
+
+      if (!mounted) return;
+
+      if (tracks.isNotEmpty) {
+        ref.read(playTrackProvider)(tracks.first);
+        context.go(AppRoutes.home);
+        context.push(AppRoutes.player);
+      } else {
+        setState(() => _error = 'Could not resolve this link');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Placeholder — Phase 4 will implement the full resolver
-    return const Scaffold(
-      backgroundColor: Color(0xFF080808),
+    return Scaffold(
+      backgroundColor: const Color(0xFF080808),
       body: Center(
-        child: CircularProgressIndicator(),
+        child: _error != null
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+                  const SizedBox(height: 16),
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.white70),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  TextButton(
+                    onPressed: () => context.go(AppRoutes.home),
+                    child: const Text('Go Home'),
+                  ),
+                ],
+              )
+            : const CircularProgressIndicator(),
       ),
     );
   }
