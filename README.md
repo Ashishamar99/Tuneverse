@@ -65,17 +65,17 @@ See [`docs/architecture.md`](docs/architecture.md) for full detail.
 
 ## Build Phases
 
-| Phase | What ships |
-|---|---|
-| 1 — Foundation | Flutter project, Isar schema, audio service, local file playback |
-| 2 — YouTube Engine | Search + stream + play YouTube audio |
-| 3 — UI Shell | Design system, navigation, mini player, full player |
-| 4 — Universal Links | Spotify/Amazon/YouTube link → plays audio |
-| 5 — Local Files | Storage scan, local playback, playlists |
-| 6 — Platform | Android Auto, Bluetooth, Chromecast |
-| 7 — Visualiser | Fluid sine wave on player screen |
-| 8 — Profiles | Family profiles, per-profile library |
-| 9 — Polish | Transitions, downloads, performance |
+| Phase | What ships | Status |
+|---|---|---|
+| 1 — Foundation | Flutter project, Isar schema, audio service, UI shell | Done |
+| 2 — YouTube Engine | Search + stream + play YouTube audio | Done |
+| 3 — UI Shell | Full player with controls, mini player, ambient glow | Done |
+| 4 — Universal Links | Spotify/Amazon/YouTube link resolver → plays via YouTube | Done |
+| 5 — Local Files | MediaStore scan, local playback, library screen | Done |
+| 6 — Platform | Android Auto content tree, audio session, play history | Done |
+| 7 — Visualiser | Fluid sine wave visualiser on player screen | Done |
+| 8 — Profiles | Netflix-style family profiles with emoji + color picker | Done |
+| 9 — Polish | Downloads, Hero animations, enhanced transitions | Done |
 
 ---
 
@@ -110,15 +110,36 @@ flutter run
 ```
 tuneverse/
 ├── lib/
-│   ├── core/           # DI, router, theme, constants
-│   ├── data/           # Repositories, data sources, Isar models
-│   ├── domain/         # Entities, use cases, interfaces
-│   └── presentation/   # Screens, widgets, Riverpod providers
+│   ├── config/              # secrets.dart (gitignored), example template
+│   ├── core/
+│   │   ├── constants/       # App constants (durations, limits)
+│   │   ├── di/              # Riverpod providers (audio, download, local, profile, resolver, youtube)
+│   │   ├── router/          # Go Router with deep links + transitions
+│   │   └── theme/           # Dark theme, dynamic accent colors
+│   ├── data/
+│   │   ├── models/          # Isar collections (track, playlist, profile, queue)
+│   │   ├── platform/        # AudioHandler with Android Auto content tree
+│   │   ├── repositories/    # ProfileRepository (Isar CRUD)
+│   │   ├── services/        # DownloadManager (queued Dio downloads)
+│   │   └── sources/
+│   │       ├── local/       # LocalFileSource (MediaStore + on_audio_query)
+│   │       ├── resolver/    # LinkParser, SpotifyFetcher, AmazonFetcher, UniversalResolver
+│   │       └── youtube/     # YouTubeSource (youtube_explode_dart)
+│   ├── domain/
+│   │   ├── entities/        # Track (with TrackSourceType enum)
+│   │   └── interfaces/      # TrackSource abstract interface
+│   └── presentation/
+│       ├── home/            # Home screen with quick actions, paste-link dialog
+│       ├── library/         # Library with Local + Playlists tabs
+│       ├── player/          # Full player + WaveformVisualiser
+│       ├── profiles/        # Netflix-style profile selector
+│       ├── search/          # YouTube search with download buttons
+│       ├── settings/        # Settings screen
+│       └── shared/widgets/  # MiniPlayer, ScaffoldWithNav
 ├── docs/
 │   ├── architecture.md
-│   ├── implementation-plan.md
-│   └── superpowers/specs/
-└── android/            # Android-specific config (AndroidAuto, etc.)
+│   └── implementation-plan.md
+└── android/                 # Android config (Android Auto, intent filters)
 ```
 
 ---
