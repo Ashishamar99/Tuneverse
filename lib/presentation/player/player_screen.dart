@@ -7,6 +7,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:tuneverse/core/di/providers.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
+import 'package:tuneverse/presentation/player/waveform_visualiser.dart';
 
 class PlayerScreen extends ConsumerWidget {
   const PlayerScreen({super.key});
@@ -99,7 +100,18 @@ class PlayerScreen extends ConsumerWidget {
                   ),
                 ),
 
-                const Spacer(flex: 2),
+                const SizedBox(height: 16),
+
+                // Fluid sine wave visualiser
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: WaveformVisualiser(
+                    accentColor: accentColor,
+                    height: 60,
+                  ),
+                ),
+
+                const SizedBox(height: 16),
 
                 // Track info
                 Padding(
