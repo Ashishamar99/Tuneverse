@@ -22,11 +22,11 @@ class AppTheme {
   static ThemeData dark(Color accentColor) {
     final cs = ColorScheme.dark().copyWith(
       primary: accentColor,
-      onPrimary: _contrastColor(accentColor),
+      onPrimary: contrastColor(accentColor),
       primaryContainer: accentColor.withValues(alpha: 0.15),
       onPrimaryContainer: accentColor,
       secondary: accentColor.withValues(alpha: 0.6),
-      onSecondary: _contrastColor(accentColor),
+      onSecondary: contrastColor(accentColor),
       secondaryContainer: accentColor.withValues(alpha: 0.1),
       onSecondaryContainer: onDark,
       surface: surface,
@@ -189,7 +189,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: accentColor,
-          foregroundColor: _contrastColor(accentColor),
+          foregroundColor: contrastColor(accentColor),
           disabledBackgroundColor: Colors.white.withValues(alpha: 0.08),
           disabledForegroundColor: onDarkSecondary,
           elevation: 0,
@@ -261,7 +261,7 @@ class AppTheme {
               ? accentColor
               : Colors.transparent;
         }),
-        checkColor: WidgetStateProperty.all(_contrastColor(accentColor)),
+        checkColor: WidgetStateProperty.all(contrastColor(accentColor)),
         side: const BorderSide(color: onDarkSecondary, width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         splashRadius: 16,
@@ -440,7 +440,7 @@ class AppTheme {
 
   // WCAG-derived threshold: colours below ~0.35 luminance read better with
   // white text; above that point the surface is light enough for dark ink.
-  static Color _contrastColor(Color bg) {
+  static Color contrastColor(Color bg) {
     return bg.computeLuminance() > 0.35 ? const Color(0xFF0D0D0D) : Colors.white;
   }
 }
