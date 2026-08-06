@@ -49,5 +49,30 @@ Future<(Isar, TuneVerseAudioHandler)> initServices() async {
   final session = await AudioSession.instance;
   await session.configure(const AudioSessionConfiguration.music());
 
+  session.becomingNoisyEventStream.listen((_) {
+    handler.pause();
+  });
+
+  session.interruptionEventStream.listen((event) {
+    if (event.begin) {
+      switch (event.type) {
+        case AudioInterruptionType.duck:
+          handler.player.setVolume(0.5);
+        case AudioInterruptionType.pause:
+        case AudioInterruptionType.unknown:
+          handler.pause();
+      }
+    } else {
+      switch (event.type) {
+        case AudioInterruptionType.duck:
+          handler.player.setVolume(1.0);
+        case AudioInterruptionType.pause:
+          handler.play();
+        case AudioInterruptionType.unknown:
+          break;
+      }
+    }
+  });
+
   return (isar, handler);
 }
