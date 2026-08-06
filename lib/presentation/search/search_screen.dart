@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuneverse/core/constants/app_constants.dart';
 import 'package:tuneverse/core/di/download_providers.dart';
+import 'package:tuneverse/core/di/playlist_providers.dart';
 import 'package:tuneverse/core/di/search_history_provider.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
@@ -281,8 +282,71 @@ class _TrackTile extends ConsumerWidget {
           );
         }
       },
+      onLongPress: () => _showAddToPlaylist(context, ref, track),
     );
   }
+}
+
+void _showAddToPlaylist(BuildContext context, WidgetRef ref, Track track) {
+  final playlists = ref.read(playlistsProvider);
+
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: AppTheme.surfaceElevated,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) => Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Add to Playlist',
+              style: TextStyle(
+                  color: AppTheme.onDark,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 16),
+          playlists.when(
+            loading: () => const CircularProgressIndicator(),
+            error: (e, _) => Text('Error: $e'),
+            data: (items) {
+              if (items.isEmpty) {
+                return const Text('No playlists yet. Create one in Library.',
+                    style: TextStyle(color: AppTheme.onDarkSecondary));
+              }
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: items
+                    .map((pl) => ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.playlist_add_rounded,
+                              color: AppTheme.onDarkSecondary),
+                          title: Text(pl.name,
+                              style: const TextStyle(color: AppTheme.onDark)),
+                          subtitle: Text('${pl.trackIds.length} tracks',
+                              style: const TextStyle(
+                                  color: AppTheme.onDarkSecondary,
+                                  fontSize: 12)),
+                          onTap: () {
+                            ref.read(addToPlaylistProvider)(pl.id, track);
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content:
+                                      Text('Added to ${pl.name}')),
+                            );
+                          },
+                        ))
+                    .toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _DownloadButton extends ConsumerWidget {

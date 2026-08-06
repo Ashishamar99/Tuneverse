@@ -7,6 +7,7 @@ import 'package:tuneverse/presentation/home/home_screen.dart';
 import 'package:tuneverse/presentation/library/library_screen.dart';
 import 'package:tuneverse/presentation/player/player_screen.dart';
 import 'package:tuneverse/presentation/profiles/profiles_screen.dart';
+import 'package:tuneverse/presentation/playlist/playlist_detail_screen.dart';
 import 'package:tuneverse/presentation/queue/queue_screen.dart';
 import 'package:tuneverse/presentation/search/search_screen.dart';
 import 'package:tuneverse/presentation/shared/widgets/scaffold_with_nav.dart';
@@ -76,6 +77,14 @@ final appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       path: AppRoutes.queue,
       builder: (context, state) => const QueueScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/playlist/:id',
+      builder: (context, state) {
+        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+        return PlaylistDetailScreen(playlistId: id);
+      },
     ),
     // Deep link handler for universal link resolver
     GoRoute(

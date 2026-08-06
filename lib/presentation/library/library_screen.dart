@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:on_audio_query/on_audio_query.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tuneverse/core/di/favorites_provider.dart';
 import 'package:tuneverse/core/di/local_providers.dart';
+import 'package:tuneverse/core/di/playlist_providers.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/domain/entities/track.dart';
@@ -317,18 +319,115 @@ class _FavoritesTab extends ConsumerWidget {
   }
 }
 
-class _PlaylistsTab extends StatelessWidget {
+class _PlaylistsTab extends ConsumerWidget {
   const _PlaylistsTab();
 
   @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text(
-        'Coming soon',
-        style: TextStyle(
-          color: AppTheme.onDarkSecondary,
-          fontSize: 15,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final playlists = ref.watch(playlistsProvider);
+
+    return playlists.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
+      data: (items) {
+        return CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('New Playlist'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.surfaceElevated,
+                    foregroundColor: AppTheme.onDark,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () => _showCreateDialog(context, ref),
+                ),
+              ),
+            ),
+            if (items.isEmpty)
+              const SliverFillRemaining(
+                child: Center(
+                  child: Text('No playlists yet',
+                      style: TextStyle(color: AppTheme.onDarkSecondary)),
+                ),
+              )
+            else
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (ctx, index) {
+                    final pl = items[index];
+                    return ListTile(
+                      leading: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceElevated,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.playlist_play_rounded,
+                            color: AppTheme.onDarkSecondary),
+                      ),
+                      title: Text(pl.name,
+                          style: const TextStyle(
+                              color: AppTheme.onDark,
+                              fontWeight: FontWeight.w500)),
+                      subtitle: Text('${pl.trackIds.length} tracks',
+                          style: const TextStyle(
+                              color: AppTheme.onDarkSecondary, fontSize: 13)),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded,
+                            color: AppTheme.onDarkSecondary, size: 20),
+                        onPressed: () {
+                          ref.read(deletePlaylistProvider)(pl.id);
+                        },
+                      ),
+                      onTap: () => context.push('/playlist/${pl.id}'),
+                    );
+                  },
+                  childCount: items.length,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showCreateDialog(BuildContext context, WidgetRef ref) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceElevated,
+        title: const Text('New Playlist',
+            style: TextStyle(color: AppTheme.onDark)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: AppTheme.onDark),
+          decoration: const InputDecoration(hintText: 'Playlist name'),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                ref.read(createPlaylistProvider)(name);
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
       ),
     );
   }
