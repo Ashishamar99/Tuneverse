@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:on_audio_query/on_audio_query.dart';
+import 'package:tuneverse/core/di/favorites_provider.dart';
 import 'package:tuneverse/core/di/local_providers.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
@@ -12,7 +13,7 @@ class LibraryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         backgroundColor: AppTheme.background,
         body: SafeArea(
@@ -30,6 +31,7 @@ class LibraryScreen extends ConsumerWidget {
               const TabBar(
                 tabs: [
                   Tab(text: 'Local'),
+                  Tab(text: 'Favorites'),
                   Tab(text: 'Playlists'),
                 ],
                 indicatorSize: TabBarIndicatorSize.label,
@@ -41,6 +43,7 @@ class LibraryScreen extends ConsumerWidget {
                 child: TabBarView(
                   children: [
                     _LocalTab(),
+                    _FavoritesTab(),
                     _PlaylistsTab(),
                   ],
                 ),
@@ -231,6 +234,85 @@ class _LocalTrackTile extends ConsumerWidget {
         Icons.music_note_rounded,
         color: AppTheme.onDarkSecondary,
       ),
+    );
+  }
+}
+
+class _FavoritesTab extends ConsumerWidget {
+  const _FavoritesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final favs = ref.watch(favoritesProvider);
+
+    return favs.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
+      data: (tracks) {
+        if (tracks.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.favorite_border_rounded,
+                    color: AppTheme.onDarkSecondary, size: 48),
+                SizedBox(height: 16),
+                Text('No favorites yet',
+                    style: TextStyle(color: AppTheme.onDarkSecondary)),
+                SizedBox(height: 8),
+                Text('Tap the heart icon on any track',
+                    style: TextStyle(
+                        color: AppTheme.onDarkSecondary, fontSize: 13)),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          itemCount: tracks.length,
+          itemBuilder: (context, index) {
+            final track = tracks[index];
+            return ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 52,
+                  height: 52,
+                  child: track.artworkUrl != null &&
+                          track.artworkUrl!.startsWith('http')
+                      ? Image.network(track.artworkUrl!, fit: BoxFit.cover)
+                      : Container(
+                          color: AppTheme.surfaceElevated,
+                          child: const Icon(Icons.music_note_rounded,
+                              color: AppTheme.onDarkSecondary),
+                        ),
+                ),
+              ),
+              title: Text(track.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: AppTheme.onDark, fontWeight: FontWeight.w500)),
+              subtitle: Text(track.artist,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: AppTheme.onDarkSecondary, fontSize: 13)),
+              trailing: IconButton(
+                icon: const Icon(Icons.favorite_rounded,
+                    color: Colors.redAccent, size: 20),
+                onPressed: () {
+                  ref.read(toggleFavoriteProvider)(track);
+                },
+              ),
+              onTap: () => ref.read(playTrackProvider)(track),
+            );
+          },
+        );
+      },
     );
   }
 }

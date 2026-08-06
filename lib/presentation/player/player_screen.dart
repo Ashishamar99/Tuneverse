@@ -4,10 +4,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:tuneverse/core/di/favorites_provider.dart';
 import 'package:tuneverse/core/di/providers.dart';
 import 'package:tuneverse/core/di/sleep_timer_provider.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
+import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/presentation/player/waveform_visualiser.dart';
 
 class PlayerScreen extends ConsumerWidget {
@@ -118,33 +120,41 @@ class PlayerScreen extends ConsumerWidget {
 
                 const SizedBox(height: 16),
 
-                // Track info
+                // Track info + favorite
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Column(
+                  child: Row(
                     children: [
-                      Text(
-                        track.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppTheme.onDark,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
+                      const SizedBox(width: 40),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Text(
+                              track.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: AppTheme.onDark,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              track.artist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: AppTheme.onDarkSecondary,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        track.artist,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppTheme.onDarkSecondary,
-                          fontSize: 15,
-                        ),
-                      ),
+                      _FavoriteButton(track: track),
                     ],
                   ),
                 ),
@@ -388,6 +398,28 @@ class _AnimatedPlayButtonState extends State<_AnimatedPlayButton>
           ),
         ),
       ),
+    );
+  }
+}
+
+class _FavoriteButton extends ConsumerWidget {
+  final Track track;
+  const _FavoriteButton({required this.track});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isFav = ref.watch(isFavoriteProvider(track.sourceId));
+
+    return IconButton(
+      icon: Icon(
+        isFav.valueOrNull == true
+            ? Icons.favorite_rounded
+            : Icons.favorite_border_rounded,
+        color: isFav.valueOrNull == true
+            ? Colors.redAccent
+            : AppTheme.onDarkSecondary,
+      ),
+      onPressed: () => ref.read(toggleFavoriteProvider)(track),
     );
   }
 }

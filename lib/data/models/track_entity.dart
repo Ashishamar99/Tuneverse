@@ -27,6 +27,7 @@ class TrackEntity {
   DateTime? downloadedAt;
   int playCount = 0;
   DateTime? lastPlayedAt;
+  bool isFavorite = false;
 
   bool get isDownloaded => downloadedAt != null && localPath != null;
 
@@ -41,6 +42,7 @@ class TrackEntity {
         sourceId: sourceId,
         localPath: localPath,
         isDownloaded: isDownloaded,
+        isFavorite: isFavorite,
       );
 
   static TrackEntity fromDomain(Track track) {

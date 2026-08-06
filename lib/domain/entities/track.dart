@@ -13,6 +13,7 @@ class Track extends Equatable {
   final String sourceId;
   final String? localPath;
   final bool isDownloaded;
+  final bool isFavorite;
 
   const Track({
     required this.id,
@@ -25,6 +26,7 @@ class Track extends Equatable {
     required this.sourceId,
     this.localPath,
     this.isDownloaded = false,
+    this.isFavorite = false,
   });
 
   Duration? get duration =>
@@ -43,6 +45,7 @@ class Track extends Equatable {
     String? sourceId,
     String? localPath,
     bool? isDownloaded,
+    bool? isFavorite,
   }) {
     return Track(
       id: id ?? this.id,
@@ -55,6 +58,7 @@ class Track extends Equatable {
       sourceId: sourceId ?? this.sourceId,
       localPath: localPath ?? this.localPath,
       isDownloaded: isDownloaded ?? this.isDownloaded,
+      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 

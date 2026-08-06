@@ -47,34 +47,39 @@ const TrackEntitySchema = CollectionSchema(
       name: r'isDownloaded',
       type: IsarType.bool,
     ),
-    r'lastPlayedAt': PropertySchema(
+    r'isFavorite': PropertySchema(
       id: 6,
+      name: r'isFavorite',
+      type: IsarType.bool,
+    ),
+    r'lastPlayedAt': PropertySchema(
+      id: 7,
       name: r'lastPlayedAt',
       type: IsarType.dateTime,
     ),
     r'localPath': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'localPath',
       type: IsarType.string,
     ),
     r'playCount': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'playCount',
       type: IsarType.long,
     ),
     r'sourceId': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'sourceId',
       type: IsarType.string,
     ),
     r'sourceType': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'sourceType',
       type: IsarType.byte,
       enumMap: _TrackEntitysourceTypeEnumValueMap,
     ),
     r'title': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'title',
       type: IsarType.string,
     )
@@ -180,12 +185,13 @@ void _trackEntitySerialize(
   writer.writeDateTime(offsets[3], object.downloadedAt);
   writer.writeLong(offsets[4], object.durationMs);
   writer.writeBool(offsets[5], object.isDownloaded);
-  writer.writeDateTime(offsets[6], object.lastPlayedAt);
-  writer.writeString(offsets[7], object.localPath);
-  writer.writeLong(offsets[8], object.playCount);
-  writer.writeString(offsets[9], object.sourceId);
-  writer.writeByte(offsets[10], object.sourceType.index);
-  writer.writeString(offsets[11], object.title);
+  writer.writeBool(offsets[6], object.isFavorite);
+  writer.writeDateTime(offsets[7], object.lastPlayedAt);
+  writer.writeString(offsets[8], object.localPath);
+  writer.writeLong(offsets[9], object.playCount);
+  writer.writeString(offsets[10], object.sourceId);
+  writer.writeByte(offsets[11], object.sourceType.index);
+  writer.writeString(offsets[12], object.title);
 }
 
 TrackEntity _trackEntityDeserialize(
@@ -201,14 +207,15 @@ TrackEntity _trackEntityDeserialize(
   object.downloadedAt = reader.readDateTimeOrNull(offsets[3]);
   object.durationMs = reader.readLongOrNull(offsets[4]);
   object.id = id;
-  object.lastPlayedAt = reader.readDateTimeOrNull(offsets[6]);
-  object.localPath = reader.readStringOrNull(offsets[7]);
-  object.playCount = reader.readLong(offsets[8]);
-  object.sourceId = reader.readString(offsets[9]);
+  object.isFavorite = reader.readBool(offsets[6]);
+  object.lastPlayedAt = reader.readDateTimeOrNull(offsets[7]);
+  object.localPath = reader.readStringOrNull(offsets[8]);
+  object.playCount = reader.readLong(offsets[9]);
+  object.sourceId = reader.readString(offsets[10]);
   object.sourceType =
-      _TrackEntitysourceTypeValueEnumMap[reader.readByteOrNull(offsets[10])] ??
+      _TrackEntitysourceTypeValueEnumMap[reader.readByteOrNull(offsets[11])] ??
           TrackSourceType.youtube;
-  object.title = reader.readString(offsets[11]);
+  object.title = reader.readString(offsets[12]);
   return object;
 }
 
@@ -232,18 +239,20 @@ P _trackEntityDeserializeProp<P>(
     case 5:
       return (reader.readBool(offset)) as P;
     case 6:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 7:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 8:
-      return (reader.readLong(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 9:
-      return (reader.readString(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 10:
+      return (reader.readString(offset)) as P;
+    case 11:
       return (_TrackEntitysourceTypeValueEnumMap[
               reader.readByteOrNull(offset)] ??
           TrackSourceType.youtube) as P;
-    case 11:
+    case 12:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1327,6 +1336,16 @@ extension TrackEntityQueryFilter
   }
 
   QueryBuilder<TrackEntity, TrackEntity, QAfterFilterCondition>
+      isFavoriteEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isFavorite',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TrackEntity, TrackEntity, QAfterFilterCondition>
       lastPlayedAtIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -2016,6 +2035,18 @@ extension TrackEntityQuerySortBy
     });
   }
 
+  QueryBuilder<TrackEntity, TrackEntity, QAfterSortBy> sortByIsFavorite() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isFavorite', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TrackEntity, TrackEntity, QAfterSortBy> sortByIsFavoriteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isFavorite', Sort.desc);
+    });
+  }
+
   QueryBuilder<TrackEntity, TrackEntity, QAfterSortBy> sortByLastPlayedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lastPlayedAt', Sort.asc);
@@ -2178,6 +2209,18 @@ extension TrackEntityQuerySortThenBy
     });
   }
 
+  QueryBuilder<TrackEntity, TrackEntity, QAfterSortBy> thenByIsFavorite() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isFavorite', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TrackEntity, TrackEntity, QAfterSortBy> thenByIsFavoriteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isFavorite', Sort.desc);
+    });
+  }
+
   QueryBuilder<TrackEntity, TrackEntity, QAfterSortBy> thenByLastPlayedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lastPlayedAt', Sort.asc);
@@ -2293,6 +2336,12 @@ extension TrackEntityQueryWhereDistinct
     });
   }
 
+  QueryBuilder<TrackEntity, TrackEntity, QDistinct> distinctByIsFavorite() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isFavorite');
+    });
+  }
+
   QueryBuilder<TrackEntity, TrackEntity, QDistinct> distinctByLastPlayedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'lastPlayedAt');
@@ -2375,6 +2424,12 @@ extension TrackEntityQueryProperty
   QueryBuilder<TrackEntity, bool, QQueryOperations> isDownloadedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isDownloaded');
+    });
+  }
+
+  QueryBuilder<TrackEntity, bool, QQueryOperations> isFavoriteProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isFavorite');
     });
   }
 
