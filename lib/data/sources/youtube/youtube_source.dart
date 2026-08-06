@@ -21,8 +21,9 @@ class YouTubeSource implements TrackSource {
   }
 
   @override
-  Future<Uri> getStreamUri(Track track) async {
-    final cached = _streamCache[track.sourceId];
+  Future<Uri> getStreamUri(Track track, {bool useMuxed = false}) async {
+    final cacheKey = useMuxed ? '${track.sourceId}:muxed' : track.sourceId;
+    final cached = _streamCache[cacheKey];
     if (cached != null && !cached.isExpired) {
       return cached.uri;
     }
@@ -31,16 +32,32 @@ class YouTubeSource implements TrackSource {
       yt.VideoId(track.sourceId),
     );
 
-    final audioStreams = manifest.audioOnly.sortByBitrate();
-    if (audioStreams.isEmpty) {
-      throw Exception('No audio streams available for ${track.sourceId}');
+    Uri uri;
+    if (useMuxed) {
+      final muxed = manifest.muxed.sortByBitrate();
+      if (muxed.isNotEmpty) {
+        uri = muxed.last.url;
+      } else {
+        final audio = manifest.audioOnly.sortByBitrate();
+        if (audio.isEmpty) {
+          throw Exception('No streams available for ${track.sourceId}');
+        }
+        uri = audio.last.url;
+      }
+    } else {
+      final audio = manifest.audioOnly.sortByBitrate();
+      if (audio.isNotEmpty) {
+        uri = audio.last.url;
+      } else {
+        final muxed = manifest.muxed.sortByBitrate();
+        if (muxed.isEmpty) {
+          throw Exception('No streams available for ${track.sourceId}');
+        }
+        uri = muxed.last.url;
+      }
     }
 
-    final best = audioStreams.last;
-    final uri = best.url;
-
-    _streamCache[track.sourceId] = _CachedUri(uri);
-
+    _streamCache[cacheKey] = _CachedUri(uri);
     return uri;
   }
 

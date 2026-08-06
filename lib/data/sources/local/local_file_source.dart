@@ -27,7 +27,7 @@ class LocalFileSource implements TrackSource {
   }
 
   @override
-  Future<Uri> getStreamUri(Track track) async {
+  Future<Uri> getStreamUri(Track track, {bool useMuxed = false}) async {
     return Uri.file(track.localPath!);
   }
 

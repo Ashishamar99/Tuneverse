@@ -38,7 +38,7 @@ final playTrackProvider = Provider((ref) {
       } else {
         debugPrint('[TuneVerse] Fetching stream for: ${track.title} (${track.sourceId})');
         uri = await youtube.getStreamUri(track);
-        debugPrint('[TuneVerse] Got stream URI: $uri');
+        debugPrint('[TuneVerse] Got audio-only stream URI: $uri');
       }
 
       final mediaItem = MediaItem(
@@ -50,7 +50,18 @@ final playTrackProvider = Provider((ref) {
       );
 
       debugPrint('[TuneVerse] Setting audio source and playing...');
-      await handler.playTrack(mediaItem, uri);
+      try {
+        await handler.playTrack(mediaItem, uri);
+      } catch (playErr) {
+        if (track.localPath == null || !track.isDownloaded) {
+          debugPrint('[TuneVerse] Audio-only failed ($playErr), retrying with muxed stream...');
+          final muxedUri = await youtube.getStreamUri(track, useMuxed: true);
+          debugPrint('[TuneVerse] Got muxed stream URI: $muxedUri');
+          await handler.playTrack(mediaItem, muxedUri);
+        } else {
+          rethrow;
+        }
+      }
       handler.recordPlay(track);
       debugPrint('[TuneVerse] Playback started successfully');
     } catch (e, st) {
