@@ -8,6 +8,8 @@ import 'package:tuneverse/data/models/profile_entity.dart';
 import 'package:tuneverse/data/models/queue_entity.dart';
 import 'package:tuneverse/data/models/track_entity.dart';
 import 'package:tuneverse/data/platform/audio_handler.dart';
+import 'package:tuneverse/data/sources/youtube/youtube_source.dart';
+import 'package:tuneverse/domain/entities/track.dart';
 
 final isarProvider = Provider<Isar>((ref) {
   throw UnimplementedError('Isar must be overridden at app startup');
@@ -48,6 +50,18 @@ Future<(Isar, TuneVerseAudioHandler)> initServices() async {
 
   final session = await AudioSession.instance;
   await session.configure(const AudioSessionConfiguration.music());
+
+  final autoYouTube = YouTubeSource();
+  handler.setYouTubeResolver((sourceId, {bool useMuxed = false}) async {
+    final track = Track(
+      id: '',
+      title: '',
+      artist: '',
+      sourceType: TrackSourceType.youtube,
+      sourceId: sourceId,
+    );
+    return autoYouTube.getStreamUri(track, useMuxed: useMuxed);
+  });
 
   session.becomingNoisyEventStream.listen((_) {
     handler.pause();

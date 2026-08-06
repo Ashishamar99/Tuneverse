@@ -8,9 +8,15 @@ class TuneVerseAudioHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
   final AudioPlayer _player = AudioPlayer();
   final Isar _isar;
+  Future<Uri> Function(String sourceId, {bool useMuxed})? _youtubeResolver;
 
   static const _recentId = 'recent';
   static const _libraryId = 'library';
+
+  void setYouTubeResolver(
+      Future<Uri> Function(String sourceId, {bool useMuxed}) resolver) {
+    _youtubeResolver = resolver;
+  }
 
   TuneVerseAudioHandler(this._isar) {
     _player.playbackEventStream.listen((event) {
@@ -106,6 +112,45 @@ class TuneVerseAudioHandler extends BaseAudioHandler
         await _isar.trackEntitys.put(entity);
       }
     });
+  }
+
+  // --- Android Auto: play from browse tree ---
+
+  @override
+  Future<void> playFromMediaId(String mediaId,
+      [Map<String, dynamic>? extras]) async {
+    final parts = mediaId.split(':');
+    if (parts.length != 2) return;
+
+    final sourceType = TrackSourceType.values.firstWhere(
+      (t) => t.name == parts[0],
+      orElse: () => TrackSourceType.youtube,
+    );
+
+    final entity = await _isar.trackEntitys
+        .getBySourceIdSourceType(parts[1], sourceType);
+    if (entity == null) return;
+
+    Uri uri;
+    if (entity.localPath != null && entity.isDownloaded) {
+      uri = Uri.file(entity.localPath!);
+    } else if (_youtubeResolver != null) {
+      try {
+        uri = await _youtubeResolver!(parts[1]);
+      } catch (_) {
+        try {
+          uri = await _youtubeResolver!(parts[1], useMuxed: true);
+        } catch (_) {
+          return;
+        }
+      }
+    } else {
+      return;
+    }
+
+    final item = _entityToMediaItem(entity);
+    await playTrack(item, uri);
+    recordPlay(entity.toDomain());
   }
 
   // --- Playback controls ---
