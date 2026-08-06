@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:tuneverse/core/di/providers.dart';
+import 'package:tuneverse/core/di/sleep_timer_provider.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/presentation/player/waveform_visualiser.dart';
@@ -65,6 +66,7 @@ class PlayerScreen extends ConsumerWidget {
                         ),
                       ),
                       const Spacer(),
+                      _SleepTimerButton(),
                       IconButton(
                         icon: const Icon(Icons.more_vert_rounded),
                         color: AppTheme.onDark,
@@ -384,6 +386,98 @@ class _AnimatedPlayButtonState extends State<_AnimatedPlayButton>
             color: AppTheme.contrastColor(widget.accentColor),
             size: 36,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SleepTimerButton extends ConsumerWidget {
+  static const _options = [
+    (label: '15 min', duration: Duration(minutes: 15)),
+    (label: '30 min', duration: Duration(minutes: 30)),
+    (label: '45 min', duration: Duration(minutes: 45)),
+    (label: '1 hour', duration: Duration(hours: 1)),
+    (label: '2 hours', duration: Duration(hours: 2)),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final timer = ref.watch(sleepTimerProvider);
+
+    return GestureDetector(
+      onTap: () => _showDialog(context, ref, timer.active),
+      child: timer.active
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                timer.label,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            )
+          : IconButton(
+              icon: const Icon(Icons.bedtime_outlined),
+              color: AppTheme.onDarkSecondary,
+              onPressed: () => _showDialog(context, ref, false),
+            ),
+    );
+  }
+
+  void _showDialog(BuildContext context, WidgetRef ref, bool isActive) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Sleep Timer',
+              style: TextStyle(
+                color: AppTheme.onDark,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ..._options.map((opt) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    opt.label,
+                    style: const TextStyle(color: AppTheme.onDark),
+                  ),
+                  onTap: () {
+                    ref.read(sleepTimerProvider.notifier).start(opt.duration);
+                    Navigator.pop(ctx);
+                  },
+                )),
+            if (isActive)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  'Cancel timer',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+                leading: const Icon(Icons.cancel_outlined, color: Colors.redAccent),
+                onTap: () {
+                  ref.read(sleepTimerProvider.notifier).cancel();
+                  Navigator.pop(ctx);
+                },
+              ),
+          ],
         ),
       ),
     );
