@@ -7,6 +7,7 @@ import 'package:tuneverse/presentation/home/home_screen.dart';
 import 'package:tuneverse/presentation/library/library_screen.dart';
 import 'package:tuneverse/presentation/player/player_screen.dart';
 import 'package:tuneverse/presentation/profiles/profiles_screen.dart';
+import 'package:tuneverse/presentation/equalizer/equalizer_screen.dart';
 import 'package:tuneverse/presentation/playlist/playlist_detail_screen.dart';
 import 'package:tuneverse/presentation/queue/queue_screen.dart';
 import 'package:tuneverse/presentation/search/search_screen.dart';
@@ -19,6 +20,7 @@ class AppRoutes {
   static const profiles = '/profiles';
   static const player = '/player';
   static const queue = '/queue';
+  static const equalizer = '/equalizer';
   static const resolve = '/resolve';
 }
 
@@ -77,6 +79,11 @@ final appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       path: AppRoutes.queue,
       builder: (context, state) => const QueueScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: AppRoutes.equalizer,
+      builder: (context, state) => const EqualizerScreen(),
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,

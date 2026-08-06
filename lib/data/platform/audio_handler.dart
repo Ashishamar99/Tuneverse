@@ -6,7 +6,8 @@ import 'package:tuneverse/domain/entities/track.dart';
 
 class TuneVerseAudioHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
-  final AudioPlayer _player = AudioPlayer();
+  final AndroidEqualizer _equalizer = AndroidEqualizer();
+  late final AudioPlayer _player;
   final Isar _isar;
   Future<Uri> Function(String sourceId, {bool useMuxed})? _youtubeResolver;
 
@@ -18,7 +19,14 @@ class TuneVerseAudioHandler extends BaseAudioHandler
     _youtubeResolver = resolver;
   }
 
+  AndroidEqualizer get equalizer => _equalizer;
+
   TuneVerseAudioHandler(this._isar) {
+    _player = AudioPlayer(
+      audioPipeline: AudioPipeline(
+        androidAudioEffects: [_equalizer],
+      ),
+    );
     _player.playbackEventStream.listen((event) {
       playbackState.add(_transformEvent(event));
     });

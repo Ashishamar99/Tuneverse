@@ -72,6 +72,11 @@ class PlayerScreen extends ConsumerWidget {
                       const Spacer(),
                       _SleepTimerButton(),
                       IconButton(
+                        icon: const Icon(Icons.equalizer_rounded),
+                        color: AppTheme.onDarkSecondary,
+                        onPressed: () => context.push(AppRoutes.equalizer),
+                      ),
+                      IconButton(
                         icon: const Icon(Icons.queue_music_rounded),
                         color: AppTheme.onDarkSecondary,
                         onPressed: () => context.push(AppRoutes.queue),
