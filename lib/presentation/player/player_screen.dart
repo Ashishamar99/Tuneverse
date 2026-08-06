@@ -4,10 +4,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tuneverse/core/di/favorites_provider.dart';
 import 'package:tuneverse/core/di/providers.dart';
 import 'package:tuneverse/core/di/sleep_timer_provider.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
+import 'package:tuneverse/core/router/app_router.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/presentation/player/waveform_visualiser.dart';
@@ -70,9 +72,9 @@ class PlayerScreen extends ConsumerWidget {
                       const Spacer(),
                       _SleepTimerButton(),
                       IconButton(
-                        icon: const Icon(Icons.more_vert_rounded),
-                        color: AppTheme.onDark,
-                        onPressed: () {},
+                        icon: const Icon(Icons.queue_music_rounded),
+                        color: AppTheme.onDarkSecondary,
+                        onPressed: () => context.push(AppRoutes.queue),
                       ),
                     ],
                   ),

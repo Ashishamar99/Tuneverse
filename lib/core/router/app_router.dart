@@ -7,6 +7,7 @@ import 'package:tuneverse/presentation/home/home_screen.dart';
 import 'package:tuneverse/presentation/library/library_screen.dart';
 import 'package:tuneverse/presentation/player/player_screen.dart';
 import 'package:tuneverse/presentation/profiles/profiles_screen.dart';
+import 'package:tuneverse/presentation/queue/queue_screen.dart';
 import 'package:tuneverse/presentation/search/search_screen.dart';
 import 'package:tuneverse/presentation/shared/widgets/scaffold_with_nav.dart';
 
@@ -16,6 +17,7 @@ class AppRoutes {
   static const library = '/library';
   static const profiles = '/profiles';
   static const player = '/player';
+  static const queue = '/queue';
   static const resolve = '/resolve';
 }
 
@@ -69,6 +71,11 @@ final appRouter = GoRouter(
           );
         },
       ),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: AppRoutes.queue,
+      builder: (context, state) => const QueueScreen(),
     ),
     // Deep link handler for universal link resolver
     GoRoute(
