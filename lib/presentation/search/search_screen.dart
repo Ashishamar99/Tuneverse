@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuneverse/core/constants/app_constants.dart';
 import 'package:tuneverse/core/di/download_providers.dart';
+import 'package:tuneverse/core/di/search_history_provider.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/data/services/download_manager.dart';
@@ -31,7 +32,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void _onSearchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(AppConstants.searchDebounceDuration, () {
-      setState(() => _query = value.trim());
+      final trimmed = value.trim();
+      setState(() => _query = trimmed);
+      if (trimmed.isNotEmpty) {
+        ref.read(searchHistoryProvider.notifier).add(trimmed);
+      }
     });
   }
 
@@ -65,11 +70,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ),
             Expanded(
               child: _query.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'Search for music',
-                        style: TextStyle(color: AppTheme.onDarkSecondary),
-                      ),
+                  ? _RecentSearches(
+                      onTap: (q) {
+                        _controller.text = q;
+                        setState(() => _query = q);
+                      },
                     )
                   : _SearchResults(query: _query),
             ),
@@ -113,6 +118,63 @@ class _SearchResults extends ConsumerWidget {
           itemBuilder: (context, index) => _TrackTile(track: tracks[index]),
         );
       },
+    );
+  }
+}
+
+class _RecentSearches extends ConsumerWidget {
+  final void Function(String) onTap;
+  const _RecentSearches({required this.onTap});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final history = ref.watch(searchHistoryProvider);
+
+    if (history.isEmpty) {
+      return const Center(
+        child: Text(
+          'Search for music',
+          style: TextStyle(color: AppTheme.onDarkSecondary),
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
+          child: Row(
+            children: [
+              const Text('Recent',
+                  style: TextStyle(
+                      color: AppTheme.onDarkSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600)),
+              const Spacer(),
+              TextButton(
+                onPressed: () =>
+                    ref.read(searchHistoryProvider.notifier).clear(),
+                child: const Text('Clear all', style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+        ),
+        ...history.map((q) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.history_rounded,
+                  color: AppTheme.onDarkSecondary, size: 20),
+              title: Text(q,
+                  style: const TextStyle(color: AppTheme.onDark, fontSize: 15)),
+              trailing: IconButton(
+                icon: const Icon(Icons.close_rounded,
+                    color: AppTheme.onDarkSecondary, size: 18),
+                onPressed: () =>
+                    ref.read(searchHistoryProvider.notifier).remove(q),
+              ),
+              onTap: () => onTap(q),
+            )),
+      ],
     );
   }
 }
