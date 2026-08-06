@@ -16,7 +16,7 @@ dependencies:
   just_audio_background: ^0.0.1-beta.12
 
   # YouTube source
-  youtube_explode_dart: ^2.3.4
+  youtube_explode_dart: ^3.1.0
 
   # Local media (Android MediaStore)
   on_audio_query: ^2.9.0

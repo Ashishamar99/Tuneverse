@@ -159,17 +159,17 @@ class TuneVerseAudioHandler extends BaseAudioHandler
     );
   }
 
-  Future<void> playTrack(MediaItem item, Uri uri) async {
+  Future<void> playTrack(MediaItem item, Uri uri, {Map<String, String>? headers}) async {
     mediaItem.add(item);
     await _player.setAudioSource(
-      AudioSource.uri(uri, tag: item),
+      AudioSource.uri(uri, tag: item, headers: headers),
     );
     await _player.play();
   }
 
-  Future<void> loadQueue(List<(MediaItem, Uri)> items, {int initialIndex = 0}) async {
+  Future<void> loadQueue(List<(MediaItem, Uri)> items, {int initialIndex = 0, Map<String, String>? headers}) async {
     final sources = items
-        .map((pair) => AudioSource.uri(pair.$2, tag: pair.$1))
+        .map((pair) => AudioSource.uri(pair.$2, tag: pair.$1, headers: headers))
         .toList();
     await _player.setAudioSource(
       ConcatenatingAudioSource(children: sources),

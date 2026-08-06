@@ -207,8 +207,17 @@ class _TrackTile extends ConsumerWidget {
           _DownloadButton(track: track),
         ],
       ),
-      onTap: () {
-        ref.read(playTrackProvider)(track);
+      onTap: () async {
+        await ref.read(playTrackProvider)(track);
+        final error = ref.read(playbackErrorProvider);
+        if (error != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Playback failed: $error'),
+              backgroundColor: Colors.red.shade800,
+            ),
+          );
+        }
       },
     );
   }
