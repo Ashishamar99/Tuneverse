@@ -19,6 +19,7 @@ void showTrackOptions(
   TrackContext trackContext = TrackContext.search,
   int? playlistId,
 }) {
+  final parentContext = context;
   showModalBottomSheet(
     context: context,
     backgroundColor: AppTheme.surfaceElevated,
@@ -29,6 +30,7 @@ void showTrackOptions(
       track: track,
       trackContext: trackContext,
       playlistId: playlistId,
+      parentContext: parentContext,
     ),
   );
 }
@@ -37,11 +39,13 @@ class _TrackOptionsSheet extends ConsumerWidget {
   final Track track;
   final TrackContext trackContext;
   final int? playlistId;
+  final BuildContext parentContext;
 
   const _TrackOptionsSheet({
     required this.track,
     required this.trackContext,
     this.playlistId,
+    required this.parentContext,
   });
 
   @override
@@ -137,7 +141,7 @@ class _TrackOptionsSheet extends ConsumerWidget {
               label: 'Add to Playlist',
               onTap: () {
                 Navigator.pop(context);
-                _showPlaylistPicker(context, ref, track);
+                _showPlaylistPicker(parentContext, ref, track);
               },
             ),
 
@@ -258,9 +262,9 @@ class _TrackOptionsSheet extends ConsumerWidget {
   }
 
   void _showPlaylistPicker(
-      BuildContext context, WidgetRef ref, Track track) {
+      BuildContext screenContext, WidgetRef ref, Track track) {
     showModalBottomSheet(
-      context: context,
+      context: screenContext,
       backgroundColor: AppTheme.surfaceElevated,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -309,8 +313,9 @@ class _TrackOptionsSheet extends ConsumerWidget {
                                   await sheetRef.read(addToPlaylistProvider)(
                                       pl.id, track);
                                   if (ctx.mounted) Navigator.pop(ctx);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                  if (screenContext.mounted) {
+                                    ScaffoldMessenger.of(screenContext)
+                                        .showSnackBar(
                                       SnackBar(
                                           content:
                                               Text('Added to ${pl.name}')),

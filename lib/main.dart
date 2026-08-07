@@ -6,10 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:tuneverse/core/di/providers.dart';
+import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/router/app_router.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/data/models/playlist_entity.dart';
 import 'package:tuneverse/data/repositories/profile_repository.dart';
+import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/presentation/onboarding/permission_screen.dart';
 
 void main() async {
@@ -82,6 +84,23 @@ class _TuneVerseAppState extends ConsumerState<TuneVerseApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(activeProfileIdProvider.notifier).state =
           widget.initialProfileId;
+
+      // Sync nowPlayingProvider with handler's current track on queue advance
+      final handler = ref.read(audioHandlerProvider);
+      handler.mediaItem.listen((item) {
+        if (item == null) return;
+        final current = ref.read(nowPlayingProvider);
+        if (current?.sourceId == item.id) return;
+        ref.read(nowPlayingProvider.notifier).state = Track(
+          id: '',
+          title: item.title,
+          artist: item.artist ?? '',
+          durationMs: item.duration?.inMilliseconds,
+          artworkUrl: item.artUri?.toString(),
+          sourceType: TrackSourceType.youtube,
+          sourceId: item.id,
+        );
+      });
     });
   }
 

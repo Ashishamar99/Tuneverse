@@ -161,6 +161,8 @@ class _ResolveRedirectScreenState extends ConsumerState<ResolveRedirectScreen> {
         context.go(AppRoutes.home);
         context.push(AppRoutes.player);
       }
+    } on UnsupportedError catch (e) {
+      if (mounted) setState(() => _error = e.message);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     }

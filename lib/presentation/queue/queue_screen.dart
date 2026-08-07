@@ -3,10 +3,42 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuneverse/core/di/providers.dart';
+import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
+import 'package:tuneverse/data/platform/audio_handler.dart';
 
 class QueueScreen extends ConsumerWidget {
   const QueueScreen({super.key});
+
+  void _confirmClear(
+      BuildContext context, TuneVerseAudioHandler handler, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceElevated,
+        title: const Text('Clear Queue',
+            style: TextStyle(color: AppTheme.onDark)),
+        content: const Text('Remove all tracks from the queue?',
+            style: TextStyle(color: AppTheme.onDarkSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              handler.clearQueue();
+              ref.read(nowPlayingProvider.notifier).state = null;
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+            },
+            child: const Text('Clear',
+                style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,24 +70,47 @@ class QueueScreen extends ConsumerWidget {
             builder: (context, currentSnap) {
               final currentId = currentSnap.data?.id;
 
-              return ReorderableListView.builder(
-                padding: const EdgeInsets.only(bottom: 100),
-                itemCount: items.length,
-                onReorderItem: (oldIndex, newIndex) {
-                  handler.skipToQueueItem(newIndex);
-                },
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  final isCurrent = item.id == currentId;
+              return Column(
+                children: [
+                  Expanded(
+                    child: ReorderableListView.builder(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      itemCount: items.length,
+                      onReorderItem: (oldIndex, newIndex) {
+                        handler.skipToQueueItem(newIndex);
+                      },
+                      itemBuilder: (context, index) {
+                        final item = items[index];
+                        final isCurrent = item.id == currentId;
 
-                  return _QueueTile(
-                    key: ValueKey('${item.id}_$index'),
-                    item: item,
-                    index: index,
-                    isCurrent: isCurrent,
-                    onTap: () => handler.skipToQueueItem(index),
-                  );
-                },
+                        return _QueueTile(
+                          key: ValueKey('${item.id}_$index'),
+                          item: item,
+                          index: index,
+                          isCurrent: isCurrent,
+                          onTap: () => handler.skipToQueueItem(index),
+                        );
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.clear_all_rounded,
+                            color: Colors.redAccent),
+                        label: const Text('Clear Queue',
+                            style: TextStyle(color: Colors.redAccent)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.redAccent),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () => _confirmClear(context, handler, ref),
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
           );

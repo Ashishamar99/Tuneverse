@@ -252,6 +252,13 @@ class TuneVerseAudioHandler extends BaseAudioHandler
     );
   }
 
+  Future<void> clearQueue() async {
+    await _player.stop();
+    _queueSource = null;
+    queue.add([]);
+    mediaItem.add(null);
+  }
+
   AudioPlayer get player => _player;
 
   Stream<Duration> get positionStream => _player.positionStream;

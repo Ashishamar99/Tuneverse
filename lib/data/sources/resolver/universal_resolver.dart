@@ -70,21 +70,16 @@ class UniversalResolver {
 
   Future<List<Track>> _resolveAmazon(ParsedLink link) async {
     if (link.type == LinkType.playlist) {
-      return _resolveAmazonPlaylist(link.originalUrl);
+      throw UnsupportedError(
+        'Amazon Music playlists cannot be imported — their pages are '
+        'JavaScript-only with no scrapable metadata.\n\n'
+        'Try sharing the playlist from YouTube Music instead, '
+        'or add tracks one at a time.',
+      );
     }
     final metadata = await _amazon.fetchFromUrl(link.originalUrl);
     if (metadata == null) return [];
     return _findOnYouTube(metadata);
-  }
-
-  Future<List<Track>> _resolveAmazonPlaylist(String url) async {
-    final tracks = await _amazon.fetchPlaylistTracks(url);
-    final results = <Track>[];
-    for (final meta in tracks) {
-      final found = await _findOnYouTube(meta);
-      if (found.isNotEmpty) results.add(found.first);
-    }
-    return results;
   }
 
   Future<List<Track>> _findOnYouTube(TrackMetadata metadata) async {
