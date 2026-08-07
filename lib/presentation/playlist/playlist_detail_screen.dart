@@ -1,3 +1,4 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,13 @@ import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/data/models/playlist_entity.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 
+final _playlistNameProvider =
+    FutureProvider.family<String, int>((ref, playlistId) async {
+  final isar = ref.watch(isarProvider);
+  final playlist = await isar.playlistEntitys.get(playlistId);
+  return playlist?.name ?? 'Playlist';
+});
+
 class PlaylistDetailScreen extends ConsumerWidget {
   final int playlistId;
   const PlaylistDetailScreen({super.key, required this.playlistId});
@@ -15,73 +23,64 @@ class PlaylistDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tracksAsync = ref.watch(playlistTracksProvider(playlistId));
-    final isar = ref.watch(isarProvider);
+    final nameAsync = ref.watch(_playlistNameProvider(playlistId));
+    final name = nameAsync.valueOrNull ?? 'Playlist';
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      body: FutureBuilder<PlaylistEntity?>(
-        future: isar.playlistEntitys.get(playlistId),
-        builder: (context, playlistSnap) {
-          final playlist = playlistSnap.data;
-          final name = playlist?.name ?? 'Playlist';
-
-          return CustomScrollView(
-            slivers: [
-              SliverAppBar(
-                backgroundColor: AppTheme.background,
-                foregroundColor: AppTheme.onDark,
-                pinned: true,
-                expandedHeight: 160,
-                flexibleSpace: FlexibleSpaceBar(
-                  title: Text(name,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                  centerTitle: true,
-                ),
-                actions: [
-                  if (playlist != null)
-                    IconButton(
-                      icon: const Icon(Icons.play_circle_filled_rounded),
-                      iconSize: 36,
-                      onPressed: () => _playAll(ref, context),
-                    ),
-                ],
-              ),
-              tracksAsync.when(
-                loading: () => const SliverFillRemaining(
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-                error: (e, _) => SliverFillRemaining(
-                  child: Center(child: Text('Error: $e')),
-                ),
-                data: (tracks) {
-                  if (tracks.isEmpty) {
-                    return const SliverFillRemaining(
-                      child: Center(
-                        child: Text('No tracks in this playlist',
-                            style:
-                                TextStyle(color: AppTheme.onDarkSecondary)),
-                      ),
-                    );
-                  }
-
-                  return SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (ctx, index) {
-                        final track = tracks[index];
-                        return _PlaylistTrackTile(
-                          track: track,
-                          playlistId: playlistId,
-                          onTap: () => ref.read(playTrackProvider)(track),
-                        );
-                      },
-                      childCount: tracks.length,
-                    ),
-                  );
-                },
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            backgroundColor: AppTheme.background,
+            foregroundColor: AppTheme.onDark,
+            pinned: true,
+            expandedHeight: 160,
+            flexibleSpace: FlexibleSpaceBar(
+              title: Text(name,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              centerTitle: true,
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.play_circle_filled_rounded),
+                iconSize: 36,
+                onPressed: () => _playAll(ref, context),
               ),
             ],
-          );
-        },
+          ),
+          tracksAsync.when(
+            loading: () => const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (e, _) => SliverFillRemaining(
+              child: Center(child: Text('Error: $e')),
+            ),
+            data: (tracks) {
+              if (tracks.isEmpty) {
+                return const SliverFillRemaining(
+                  child: Center(
+                    child: Text('No tracks in this playlist',
+                        style: TextStyle(color: AppTheme.onDarkSecondary)),
+                  ),
+                );
+              }
+
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (ctx, index) {
+                    final track = tracks[index];
+                    return _PlaylistTrackTile(
+                      track: track,
+                      playlistId: playlistId,
+                      onTap: () => ref.read(playTrackProvider)(track),
+                    );
+                  },
+                  childCount: tracks.length,
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -89,7 +88,35 @@ class PlaylistDetailScreen extends ConsumerWidget {
   Future<void> _playAll(WidgetRef ref, BuildContext context) async {
     final tracks = ref.read(playlistTracksProvider(playlistId)).valueOrNull;
     if (tracks == null || tracks.isEmpty) return;
-    await ref.read(playTrackProvider)(tracks.first);
+
+    final handler = ref.read(audioHandlerProvider);
+    final youtube = ref.read(youtubeSourceProvider);
+
+    ref.read(nowPlayingProvider.notifier).state = tracks.first;
+
+    final items = <(MediaItem, Uri)>[];
+    for (final track in tracks) {
+      try {
+        final uri = track.localPath != null && track.isDownloaded
+            ? Uri.file(track.localPath!)
+            : await youtube.getStreamUri(track, useMuxed: true);
+        final mediaItem = MediaItem(
+          id: track.sourceId,
+          title: track.title,
+          artist: track.artist,
+          duration: track.duration,
+          artUri:
+              track.artworkUrl != null ? Uri.parse(track.artworkUrl!) : null,
+        );
+        items.add((mediaItem, uri));
+      } catch (_) {
+        // Skip tracks that fail to resolve
+      }
+    }
+
+    if (items.isEmpty) return;
+    await handler.loadQueue(items);
+    await handler.play();
   }
 }
 

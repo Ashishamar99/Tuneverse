@@ -288,63 +288,71 @@ class _TrackTile extends ConsumerWidget {
 }
 
 void _showAddToPlaylist(BuildContext context, WidgetRef ref, Track track) {
-  final playlists = ref.read(playlistsProvider);
-
   showModalBottomSheet(
     context: context,
     backgroundColor: AppTheme.surfaceElevated,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (ctx) => Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Add to Playlist',
-              style: TextStyle(
-                  color: AppTheme.onDark,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 16),
-          playlists.when(
-            loading: () => const CircularProgressIndicator(),
-            error: (e, _) => Text('Error: $e'),
-            data: (items) {
-              if (items.isEmpty) {
-                return const Text('No playlists yet. Create one in Library.',
-                    style: TextStyle(color: AppTheme.onDarkSecondary));
-              }
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: items
-                    .map((pl) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.playlist_add_rounded,
-                              color: AppTheme.onDarkSecondary),
-                          title: Text(pl.name,
-                              style: const TextStyle(color: AppTheme.onDark)),
-                          subtitle: Text('${pl.trackIds.length} tracks',
-                              style: const TextStyle(
-                                  color: AppTheme.onDarkSecondary,
-                                  fontSize: 12)),
-                          onTap: () {
-                            ref.read(addToPlaylistProvider)(pl.id, track);
-                            Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content:
-                                      Text('Added to ${pl.name}')),
-                            );
-                          },
-                        ))
-                    .toList(),
-              );
-            },
+    builder: (ctx) => Consumer(
+      builder: (ctx, sheetRef, _) {
+        final playlists = sheetRef.watch(playlistsProvider);
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Add to Playlist',
+                  style: TextStyle(
+                      color: AppTheme.onDark,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600)),
+              const SizedBox(height: 16),
+              playlists.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Text('Error: $e'),
+                data: (items) {
+                  if (items.isEmpty) {
+                    return const Text(
+                        'No playlists yet. Create one in Library.',
+                        style: TextStyle(color: AppTheme.onDarkSecondary));
+                  }
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: items
+                        .map((pl) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.playlist_add_rounded,
+                                  color: AppTheme.onDarkSecondary),
+                              title: Text(pl.name,
+                                  style:
+                                      const TextStyle(color: AppTheme.onDark)),
+                              subtitle: Text('${pl.trackIds.length} tracks',
+                                  style: const TextStyle(
+                                      color: AppTheme.onDarkSecondary,
+                                      fontSize: 12)),
+                              onTap: () async {
+                                await sheetRef.read(addToPlaylistProvider)(
+                                    pl.id, track);
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text('Added to ${pl.name}')),
+                                  );
+                                }
+                              },
+                            ))
+                        .toList(),
+                  );
+                },
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     ),
   );
 }

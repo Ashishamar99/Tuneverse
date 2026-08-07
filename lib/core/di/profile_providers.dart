@@ -20,6 +20,7 @@ final activeProfileProvider = FutureProvider<ProfileEntity>((ref) async {
 
 final switchProfileProvider = Provider<Future<void> Function(int)>((ref) {
   return (int profileId) async {
+    ref.read(activeProfileIdProvider.notifier).state = profileId.toString();
     await ref.read(profileRepositoryProvider).switchTo(profileId);
     ref.invalidate(allProfilesProvider);
   };

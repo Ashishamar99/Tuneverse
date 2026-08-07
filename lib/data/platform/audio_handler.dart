@@ -212,11 +212,14 @@ class TuneVerseAudioHandler extends BaseAudioHandler
     );
   }
 
+  ConcatenatingAudioSource? _queueSource;
+
   Future<void> playTrack(MediaItem item, Uri uri, {Map<String, String>? headers}) async {
     mediaItem.add(item);
-    await _player.setAudioSource(
-      AudioSource.uri(uri, tag: item, headers: headers),
+    _queueSource = ConcatenatingAudioSource(
+      children: [AudioSource.uri(uri, tag: item, headers: headers)],
     );
+    await _player.setAudioSource(_queueSource!);
     await _player.play();
   }
 
@@ -224,9 +227,28 @@ class TuneVerseAudioHandler extends BaseAudioHandler
     final sources = items
         .map((pair) => AudioSource.uri(pair.$2, tag: pair.$1, headers: headers))
         .toList();
+    _queueSource = ConcatenatingAudioSource(children: sources);
     await _player.setAudioSource(
-      ConcatenatingAudioSource(children: sources),
+      _queueSource!,
       initialIndex: initialIndex,
+    );
+  }
+
+  Future<void> addToQueue(MediaItem item, Uri uri) async {
+    if (_queueSource == null) {
+      return playTrack(item, uri);
+    }
+    await _queueSource!.add(AudioSource.uri(uri, tag: item));
+  }
+
+  Future<void> insertAfterCurrent(MediaItem item, Uri uri) async {
+    if (_queueSource == null) {
+      return playTrack(item, uri);
+    }
+    final currentIndex = _player.currentIndex ?? 0;
+    await _queueSource!.insert(
+      currentIndex + 1,
+      AudioSource.uri(uri, tag: item),
     );
   }
 
