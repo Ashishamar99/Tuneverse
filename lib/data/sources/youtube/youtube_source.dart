@@ -104,7 +104,14 @@ class YouTubeSource implements TrackSource {
   }
 
   Future<List<Track>> getPlaylistTracks(String playlistId) async {
+    final playlist = await _client.playlists.get(playlistId);
     final videos = await _client.playlists.getVideos(playlistId).toList();
+    if (videos.isEmpty && (playlist.videoCount ?? 0) > 0) {
+      throw UnsupportedError(
+        '"${playlist.title}" is a personalized YouTube Music playlist '
+        'that can\'t be imported. Try a regular public playlist instead.',
+      );
+    }
     return videos.map(_videoToTrack).toList();
   }
 
