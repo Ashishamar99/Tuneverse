@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt;
 import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/domain/interfaces/track_source.dart';
@@ -104,15 +107,86 @@ class YouTubeSource implements TrackSource {
   }
 
   Future<List<Track>> getPlaylistTracks(String playlistId) async {
-    final playlist = await _client.playlists.get(playlistId);
-    final videos = await _client.playlists.getVideos(playlistId).toList();
-    if (videos.isEmpty && (playlist.videoCount ?? 0) > 0) {
-      throw UnsupportedError(
-        '"${playlist.title}" is a personalized YouTube Music playlist '
-        'that can\'t be imported. Try a regular public playlist instead.',
+    try {
+      final videos = await _client.playlists.getVideos(playlistId).toList();
+      if (videos.isNotEmpty) {
+        return videos.map(_videoToTrack).toList();
+      }
+    } catch (_) {}
+    // youtube_explode_dart getVideos() is broken — fall back to RSS feed
+    return _getPlaylistTracksFromRss(playlistId);
+  }
+
+  Future<List<Track>> _getPlaylistTracksFromRss(String playlistId) async {
+    final url = Uri.parse(
+      'https://www.youtube.com/feeds/videos.xml?playlist_id=$playlistId',
+    );
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(url);
+      final response = await request.close();
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Could not fetch playlist (HTTP ${response.statusCode})',
+        );
+      }
+      final body = await response.transform(utf8.decoder).join();
+      return _parseRssFeed(body);
+    } finally {
+      client.close();
+    }
+  }
+
+  static final _entryPattern = RegExp(r'<entry>(.*?)</entry>', dotAll: true);
+  static final _videoIdPattern = RegExp(r'<yt:videoId>(.*?)</yt:videoId>');
+  static final _mediaTitlePattern =
+      RegExp(r'<media:title>(.*?)</media:title>', dotAll: true);
+  static final _titlePattern = RegExp(r'<title>(.*?)</title>');
+  static final _authorPattern =
+      RegExp(r'<author>.*?<name>(.*?)</name>.*?</author>', dotAll: true);
+  static final _thumbnailPattern =
+      RegExp(r'<media:thumbnail[^>]*url="([^"]*)"');
+
+  List<Track> _parseRssFeed(String xml) {
+    final tracks = <Track>[];
+    for (final match in _entryPattern.allMatches(xml)) {
+      final entry = match.group(1)!;
+      final videoId = _videoIdPattern.firstMatch(entry)?.group(1);
+      if (videoId == null) continue;
+
+      final title = _mediaTitlePattern.firstMatch(entry)?.group(1) ??
+          _titlePattern.firstMatch(entry)?.group(1) ??
+          'Unknown';
+      final author =
+          _authorPattern.firstMatch(entry)?.group(1) ?? 'Unknown';
+      final thumbnail = _thumbnailPattern.firstMatch(entry)?.group(1);
+
+      tracks.add(Track(
+        id: '',
+        title: _decodeHtmlEntities(title),
+        artist: _decodeHtmlEntities(author),
+        durationMs: null,
+        artworkUrl: thumbnail,
+        sourceType: TrackSourceType.youtube,
+        sourceId: videoId,
+      ));
+    }
+    if (tracks.isEmpty) {
+      throw Exception(
+        'Playlist is empty, private, or does not exist.',
       );
     }
-    return videos.map(_videoToTrack).toList();
+    return tracks;
+  }
+
+  String _decodeHtmlEntities(String text) {
+    return text
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .replaceAll('&apos;', "'");
   }
 
   Future<String> getPlaylistTitle(String playlistId) async {
