@@ -103,6 +103,16 @@ class YouTubeSource implements TrackSource {
     return duration.inSeconds > 30 && duration.inSeconds < 600;
   }
 
+  Future<List<Track>> getPlaylistTracks(String playlistId) async {
+    final videos = await _client.playlists.getVideos(playlistId).toList();
+    return videos.map(_videoToTrack).toList();
+  }
+
+  Future<String> getPlaylistTitle(String playlistId) async {
+    final playlist = await _client.playlists.get(playlistId);
+    return playlist.title;
+  }
+
   Track _videoToTrack(yt.Video video) {
     return Track(
       id: '',

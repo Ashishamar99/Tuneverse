@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tuneverse/core/di/playlist_providers.dart';
 import 'package:tuneverse/core/di/resolver_providers.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
+import 'package:tuneverse/data/sources/resolver/link_parser.dart';
+import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/presentation/home/home_screen.dart';
 import 'package:tuneverse/presentation/library/library_screen.dart';
 import 'package:tuneverse/presentation/player/player_screen.dart';
@@ -124,6 +127,7 @@ class ResolveRedirectScreen extends ConsumerStatefulWidget {
 
 class _ResolveRedirectScreenState extends ConsumerState<ResolveRedirectScreen> {
   String? _error;
+  String? _status;
 
   @override
   void initState() {
@@ -133,21 +137,53 @@ class _ResolveRedirectScreenState extends ConsumerState<ResolveRedirectScreen> {
 
   Future<void> _resolve() async {
     try {
+      final parsed = LinkParser.parse(widget.url);
+      final isPlaylist = parsed?.type == LinkType.playlist;
+
+      if (isPlaylist) {
+        setState(() => _status = 'Importing playlist...');
+      }
+
       final resolver = ref.read(universalResolverProvider);
       final tracks = await resolver.resolve(widget.url);
 
       if (!mounted) return;
 
-      if (tracks.isNotEmpty) {
+      if (tracks.isEmpty) {
+        setState(() => _error = 'Could not resolve this link');
+        return;
+      }
+
+      if (isPlaylist && tracks.length > 1) {
+        await _importAsPlaylist(tracks, parsed);
+      } else {
         ref.read(playTrackProvider)(tracks.first);
         context.go(AppRoutes.home);
         context.push(AppRoutes.player);
-      } else {
-        setState(() => _error = 'Could not resolve this link');
       }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     }
+  }
+
+  Future<void> _importAsPlaylist(List<Track> tracks, ParsedLink? parsed) async {
+    final playlistName = parsed?.platform.name ?? 'Imported';
+    final label = 'Imported ($playlistName) — ${tracks.length} tracks';
+
+    final createPlaylist = ref.read(createPlaylistProvider);
+    final addToPlaylist = ref.read(addToPlaylistProvider);
+
+    final playlist = await createPlaylist(label);
+    for (final track in tracks) {
+      await addToPlaylist(playlist.id, track);
+    }
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Imported ${tracks.length} tracks as "$label"')),
+    );
+    context.go(AppRoutes.library);
   }
 
   @override
@@ -173,7 +209,17 @@ class _ResolveRedirectScreenState extends ConsumerState<ResolveRedirectScreen> {
                   ),
                 ],
               )
-            : const CircularProgressIndicator(),
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  if (_status != null) ...[
+                    const SizedBox(height: 16),
+                    Text(_status!,
+                        style: const TextStyle(color: Colors.white70)),
+                  ],
+                ],
+              ),
       ),
     );
   }

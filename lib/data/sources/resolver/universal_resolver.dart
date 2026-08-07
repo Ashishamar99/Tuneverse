@@ -37,6 +37,9 @@ class UniversalResolver {
       final track = await _youtube.resolve(link.id);
       return track != null ? [track] : [];
     }
+    if (link.type == LinkType.playlist) {
+      return _youtube.getPlaylistTracks(link.id);
+    }
     return [];
   }
 
@@ -66,9 +69,22 @@ class UniversalResolver {
   }
 
   Future<List<Track>> _resolveAmazon(ParsedLink link) async {
+    if (link.type == LinkType.playlist) {
+      return _resolveAmazonPlaylist(link.originalUrl);
+    }
     final metadata = await _amazon.fetchFromUrl(link.originalUrl);
     if (metadata == null) return [];
     return _findOnYouTube(metadata);
+  }
+
+  Future<List<Track>> _resolveAmazonPlaylist(String url) async {
+    final tracks = await _amazon.fetchPlaylistTracks(url);
+    final results = <Track>[];
+    for (final meta in tracks) {
+      final found = await _findOnYouTube(meta);
+      if (found.isNotEmpty) results.add(found.first);
+    }
+    return results;
   }
 
   Future<List<Track>> _findOnYouTube(TrackMetadata metadata) async {

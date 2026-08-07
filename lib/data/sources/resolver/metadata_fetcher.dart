@@ -154,6 +154,43 @@ class AmazonFetcher {
     }
   }
 
+  Future<List<TrackMetadata>> fetchPlaylistTracks(String url) async {
+    try {
+      final response = await _dio.get(
+        url,
+        options: Options(
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 14) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/120.0.0.0 Mobile Safari/537.36',
+          },
+          followRedirects: true,
+        ),
+      );
+
+      final html = response.data as String;
+      final titlePattern = RegExp(
+        r'<meta\s+property="music:song"\s+content="([^"]+)"',
+      );
+      final matches = titlePattern.allMatches(html);
+
+      if (matches.isEmpty) {
+        final single = await fetchFromUrl(url);
+        return single != null ? [single] : [];
+      }
+
+      final tracks = <TrackMetadata>[];
+      for (final match in matches) {
+        final trackUrl = _decodeHtmlEntities(match.group(1)!);
+        final meta = await fetchFromUrl(trackUrl);
+        if (meta != null) tracks.add(meta);
+      }
+      return tracks;
+    } catch (_) {
+      return [];
+    }
+  }
+
   String _decodeHtmlEntities(String text) {
     return text
         .replaceAll('&amp;', '&')
