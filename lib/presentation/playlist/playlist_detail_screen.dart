@@ -8,6 +8,7 @@ import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/data/models/playlist_entity.dart';
 import 'package:tuneverse/domain/entities/track.dart';
+import 'package:tuneverse/presentation/shared/widgets/track_options_sheet.dart';
 
 final _playlistNameProvider =
     FutureProvider.family<String, int>((ref, playlistId) async {
@@ -183,6 +184,12 @@ class _PlaylistTrackTile extends ConsumerWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
                 color: AppTheme.onDarkSecondary, fontSize: 13)),
+        trailing: GestureDetector(
+          onTap: () => showTrackOptions(context, ref, track,
+              trackContext: TrackContext.playlist, playlistId: playlistId),
+          child: const Icon(Icons.more_vert_rounded,
+              color: AppTheme.onDarkSecondary, size: 20),
+        ),
         onTap: onTap,
       ),
     );

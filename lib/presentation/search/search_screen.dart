@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuneverse/core/constants/app_constants.dart';
 import 'package:tuneverse/core/di/download_providers.dart';
-import 'package:tuneverse/core/di/playlist_providers.dart';
 import 'package:tuneverse/core/di/search_history_provider.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/data/services/download_manager.dart';
 import 'package:tuneverse/domain/entities/track.dart';
+import 'package:tuneverse/presentation/shared/widgets/track_options_sheet.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -268,6 +268,14 @@ class _TrackTile extends ConsumerWidget {
           ),
           const SizedBox(width: 4),
           _DownloadButton(track: track),
+          GestureDetector(
+            onTap: () => showTrackOptions(context, ref, track),
+            child: const Padding(
+              padding: EdgeInsets.only(left: 4),
+              child: Icon(Icons.more_vert_rounded,
+                  color: AppTheme.onDarkSecondary, size: 20),
+            ),
+          ),
         ],
       ),
       onTap: () async {
@@ -282,80 +290,11 @@ class _TrackTile extends ConsumerWidget {
           );
         }
       },
-      onLongPress: () => _showAddToPlaylist(context, ref, track),
+      onLongPress: () => showTrackOptions(context, ref, track),
     );
   }
 }
 
-void _showAddToPlaylist(BuildContext context, WidgetRef ref, Track track) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: AppTheme.surfaceElevated,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (ctx) => Consumer(
-      builder: (ctx, sheetRef, _) {
-        final playlists = sheetRef.watch(playlistsProvider);
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Add to Playlist',
-                  style: TextStyle(
-                      color: AppTheme.onDark,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600)),
-              const SizedBox(height: 16),
-              playlists.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Text('Error: $e'),
-                data: (items) {
-                  if (items.isEmpty) {
-                    return const Text(
-                        'No playlists yet. Create one in Library.',
-                        style: TextStyle(color: AppTheme.onDarkSecondary));
-                  }
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: items
-                        .map((pl) => ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.playlist_add_rounded,
-                                  color: AppTheme.onDarkSecondary),
-                              title: Text(pl.name,
-                                  style:
-                                      const TextStyle(color: AppTheme.onDark)),
-                              subtitle: Text('${pl.trackIds.length} tracks',
-                                  style: const TextStyle(
-                                      color: AppTheme.onDarkSecondary,
-                                      fontSize: 12)),
-                              onTap: () async {
-                                await sheetRef.read(addToPlaylistProvider)(
-                                    pl.id, track);
-                                if (ctx.mounted) Navigator.pop(ctx);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text('Added to ${pl.name}')),
-                                  );
-                                }
-                              },
-                            ))
-                        .toList(),
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    ),
-  );
-}
 
 class _DownloadButton extends ConsumerWidget {
   final Track track;

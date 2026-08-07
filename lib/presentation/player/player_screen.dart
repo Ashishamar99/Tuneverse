@@ -13,6 +13,7 @@ import 'package:tuneverse/core/router/app_router.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/presentation/player/waveform_visualiser.dart';
+import 'package:tuneverse/presentation/shared/widgets/track_options_sheet.dart';
 
 class PlayerScreen extends ConsumerWidget {
   const PlayerScreen({super.key});
@@ -80,6 +81,14 @@ class PlayerScreen extends ConsumerWidget {
                         icon: const Icon(Icons.queue_music_rounded),
                         color: AppTheme.onDarkSecondary,
                         onPressed: () => context.push(AppRoutes.queue),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.more_vert_rounded),
+                        color: AppTheme.onDarkSecondary,
+                        onPressed: () => showTrackOptions(
+                          context, ref, track,
+                          trackContext: TrackContext.player,
+                        ),
                       ),
                     ],
                   ),

@@ -8,6 +8,7 @@ import 'package:tuneverse/core/di/playlist_providers.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/domain/entities/track.dart';
+import 'package:tuneverse/presentation/shared/widgets/track_options_sheet.dart';
 
 class LibraryScreen extends ConsumerWidget {
   const LibraryScreen({super.key});
@@ -216,12 +217,24 @@ class _LocalTrackTile extends ConsumerWidget {
           fontSize: 13,
         ),
       ),
-      trailing: Text(
-        _formatDuration(track.durationMs),
-        style: const TextStyle(
-          color: AppTheme.onDarkSecondary,
-          fontSize: 13,
-        ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _formatDuration(track.durationMs),
+            style: const TextStyle(
+              color: AppTheme.onDarkSecondary,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: () => showTrackOptions(context, ref, track,
+                trackContext: TrackContext.library),
+            child: const Icon(Icons.more_vert_rounded,
+                color: AppTheme.onDarkSecondary, size: 20),
+          ),
+        ],
       ),
       onTap: () {
         ref.read(playLocalTrackProvider)(track);
@@ -303,12 +316,11 @@ class _FavoritesTab extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                       color: AppTheme.onDarkSecondary, fontSize: 13)),
-              trailing: IconButton(
-                icon: const Icon(Icons.favorite_rounded,
-                    color: Colors.redAccent, size: 20),
-                onPressed: () {
-                  ref.read(toggleFavoriteProvider)(track);
-                },
+              trailing: GestureDetector(
+                onTap: () => showTrackOptions(context, ref, track,
+                    trackContext: TrackContext.favorites),
+                child: const Icon(Icons.more_vert_rounded,
+                    color: AppTheme.onDarkSecondary, size: 20),
               ),
               onTap: () => ref.read(playTrackProvider)(track),
             );
