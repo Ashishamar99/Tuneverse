@@ -8,6 +8,7 @@ import 'package:tuneverse/data/models/profile_entity.dart';
 import 'package:tuneverse/data/models/queue_entity.dart';
 import 'package:tuneverse/data/models/track_entity.dart';
 import 'package:tuneverse/data/platform/audio_handler.dart';
+import 'package:tuneverse/data/platform/cast_service.dart';
 import 'package:tuneverse/data/sources/youtube/youtube_source.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 
@@ -87,6 +88,13 @@ Future<(Isar, TuneVerseAudioHandler)> initServices() async {
       }
     }
   });
+
+  // Init Chromecast (non-blocking, best-effort)
+  try {
+    await CastService().init();
+  } catch (_) {
+    // Cast init may fail on devices without Google Play Services
+  }
 
   return (isar, handler);
 }

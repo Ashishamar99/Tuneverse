@@ -6,13 +6,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tuneverse/core/di/favorites_provider.dart';
+import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
+import 'package:tuneverse/core/di/cast_providers.dart';
 import 'package:tuneverse/core/di/providers.dart';
+import 'package:tuneverse/data/platform/audio_handler.dart';
 import 'package:tuneverse/core/di/sleep_timer_provider.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/router/app_router.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/presentation/player/waveform_visualiser.dart';
+import 'package:tuneverse/presentation/shared/widgets/cast_button.dart';
 import 'package:tuneverse/presentation/shared/widgets/track_options_sheet.dart';
 
 class PlayerScreen extends ConsumerWidget {
@@ -27,6 +31,8 @@ class PlayerScreen extends ConsumerWidget {
     }
 
     final handler = ref.watch(audioHandlerProvider);
+    final casting = ref.watch(isCastingProvider).valueOrNull ?? false;
+    final castDeviceName = ref.watch(castDeviceNameProvider).valueOrNull;
     final accentColor = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
@@ -51,6 +57,30 @@ class PlayerScreen extends ConsumerWidget {
           SafeArea(
             child: Column(
               children: [
+                // Cast banner
+                if (casting)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.cast_connected_rounded,
+                            size: 16, color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Casting to ${castDeviceName ?? 'device'}',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 // Top bar
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -72,6 +102,7 @@ class PlayerScreen extends ConsumerWidget {
                       ),
                       const Spacer(),
                       _SleepTimerButton(),
+                      const CastButton(),
                       IconButton(
                         icon: const Icon(Icons.equalizer_rounded),
                         color: AppTheme.onDarkSecondary,
@@ -180,62 +211,10 @@ class PlayerScreen extends ConsumerWidget {
                 // Seek bar
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 28),
-                  child: StreamBuilder<Duration>(
-                    stream: handler.positionStream,
-                    builder: (context, posSnap) {
-                      return StreamBuilder<Duration?>(
-                        stream: handler.durationStream,
-                        builder: (context, durSnap) {
-                          final position = posSnap.data ?? Duration.zero;
-                          final duration = durSnap.data ?? Duration.zero;
-                          final maxVal = duration.inMilliseconds.toDouble();
-
-                          return Column(
-                            children: [
-                              SliderTheme(
-                                data: Theme.of(context).sliderTheme,
-                                child: Slider(
-                                  value: maxVal > 0
-                                      ? position.inMilliseconds
-                                          .toDouble()
-                                          .clamp(0, maxVal)
-                                      : 0,
-                                  max: maxVal > 0 ? maxVal : 1,
-                                  onChanged: (value) {
-                                    handler.seek(
-                                      Duration(milliseconds: value.toInt()),
-                                    );
-                                  },
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      _formatDuration(position),
-                                      style: const TextStyle(
-                                        color: AppTheme.onDarkSecondary,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    Text(
-                                      _formatDuration(duration),
-                                      style: const TextStyle(
-                                        color: AppTheme.onDarkSecondary,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
+                  child: _CastAwareSeekBar(
+                    handler: handler,
+                    casting: casting,
+                    trackDuration: track.duration,
                   ),
                 ),
 
@@ -274,24 +253,26 @@ class PlayerScreen extends ConsumerWidget {
                         onPressed: handler.skipToPrevious,
                       ),
 
-                      // Play / Pause
-                      StreamBuilder<PlaybackState>(
-                        stream: handler.playbackState,
-                        builder: (context, snap) {
-                          final playing = snap.data?.playing ?? false;
-                          return _AnimatedPlayButton(
-                            playing: playing,
-                            accentColor: accentColor,
-                            onPressed: () {
-                              if (playing) {
-                                handler.pause();
-                              } else {
-                                handler.play();
-                              }
-                            },
-                          );
-                        },
-                      ),
+                      // Play / Pause (cast-aware)
+                      casting
+                          ? _CastPlayPauseButton(accentColor: accentColor)
+                          : StreamBuilder<PlaybackState>(
+                              stream: handler.playbackState,
+                              builder: (context, snap) {
+                                final playing = snap.data?.playing ?? false;
+                                return _AnimatedPlayButton(
+                                  playing: playing,
+                                  accentColor: accentColor,
+                                  onPressed: () {
+                                    if (playing) {
+                                      handler.pause();
+                                    } else {
+                                      handler.play();
+                                    }
+                                  },
+                                );
+                              },
+                            ),
 
                       // Next
                       IconButton(
@@ -344,11 +325,6 @@ class PlayerScreen extends ConsumerWidget {
     );
   }
 
-  String _formatDuration(Duration d) {
-    final minutes = d.inMinutes;
-    final seconds = (d.inSeconds % 60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
-  }
 }
 
 class _AnimatedPlayButton extends StatefulWidget {
@@ -529,5 +505,121 @@ class _SleepTimerButton extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+class _CastPlayPauseButton extends ConsumerWidget {
+  final Color accentColor;
+  const _CastPlayPauseButton({required this.accentColor});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(castMediaStatusProvider).valueOrNull;
+    final playing =
+        status?.playerState == CastMediaPlayerState.playing;
+    final castService = ref.read(castServiceProvider);
+
+    return _AnimatedPlayButton(
+      playing: playing,
+      accentColor: accentColor,
+      onPressed: () {
+        if (playing) {
+          castService.pause();
+        } else {
+          castService.play();
+        }
+      },
+    );
+  }
+}
+
+class _CastAwareSeekBar extends ConsumerWidget {
+  final TuneVerseAudioHandler handler;
+  final bool casting;
+  final Duration? trackDuration;
+
+  const _CastAwareSeekBar({
+    required this.handler,
+    required this.casting,
+    this.trackDuration,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (casting) {
+      final castPos = ref.watch(castPositionProvider).valueOrNull ?? Duration.zero;
+      final dur = trackDuration ?? Duration.zero;
+      final maxVal = dur.inMilliseconds.toDouble();
+      final castService = ref.read(castServiceProvider);
+
+      return _buildSlider(context, castPos, dur, maxVal, (value) {
+        castService.seek(Duration(milliseconds: value.toInt()));
+      });
+    }
+
+    return StreamBuilder<Duration>(
+      stream: handler.positionStream,
+      builder: (context, posSnap) {
+        return StreamBuilder<Duration?>(
+          stream: handler.durationStream,
+          builder: (context, durSnap) {
+            final position = posSnap.data ?? Duration.zero;
+            final duration = durSnap.data ?? Duration.zero;
+            final maxVal = duration.inMilliseconds.toDouble();
+
+            return _buildSlider(context, position, duration, maxVal, (value) {
+              handler.seek(Duration(milliseconds: value.toInt()));
+            });
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSlider(
+    BuildContext context,
+    Duration position,
+    Duration duration,
+    double maxVal,
+    ValueChanged<double> onChanged,
+  ) {
+    return Column(
+      children: [
+        SliderTheme(
+          data: Theme.of(context).sliderTheme,
+          child: Slider(
+            value: maxVal > 0
+                ? position.inMilliseconds.toDouble().clamp(0, maxVal)
+                : 0,
+            max: maxVal > 0 ? maxVal : 1,
+            onChanged: onChanged,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _fmt(position),
+                style: const TextStyle(
+                    color: AppTheme.onDarkSecondary, fontSize: 12),
+              ),
+              Text(
+                _fmt(duration),
+                style: const TextStyle(
+                    color: AppTheme.onDarkSecondary, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _fmt(Duration d) {
+    final minutes = d.inMinutes;
+    final seconds = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 }

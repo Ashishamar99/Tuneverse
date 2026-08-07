@@ -1,6 +1,7 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tuneverse/core/di/cast_providers.dart';
 import 'package:tuneverse/core/di/providers.dart';
 import 'package:tuneverse/data/sources/youtube/youtube_source.dart';
 import 'package:tuneverse/domain/entities/track.dart';
@@ -26,6 +27,7 @@ final playTrackProvider = Provider((ref) {
   return (Track track) async {
     final handler = ref.read(audioHandlerProvider);
     final youtube = ref.read(youtubeSourceProvider);
+    final castService = ref.read(castServiceProvider);
 
     ref.read(playbackErrorProvider.notifier).state = null;
     ref.read(nowPlayingProvider.notifier).state = track;
@@ -39,6 +41,22 @@ final playTrackProvider = Provider((ref) {
         debugPrint('[TuneVerse] Fetching stream for: ${track.title} (${track.sourceId})');
         uri = await youtube.getStreamUri(track);
         debugPrint('[TuneVerse] Got audio-only stream URI: $uri');
+      }
+
+      // Cast path: send media to Chromecast instead of local player
+      if (castService.isCasting) {
+        debugPrint('[TuneVerse] Casting to ${castService.connectedDeviceName}');
+        await handler.pause();
+        await castService.loadMedia(
+          streamUri: uri,
+          title: track.title,
+          artist: track.artist,
+          artworkUrl: track.artworkUrl,
+          duration: track.duration,
+        );
+        handler.recordPlay(track);
+        debugPrint('[TuneVerse] Cast playback started');
+        return;
       }
 
       final mediaItem = MediaItem(

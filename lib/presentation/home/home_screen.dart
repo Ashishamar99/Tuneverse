@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/router/app_router.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
+import 'package:tuneverse/presentation/shared/widgets/cast_button.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -34,6 +35,7 @@ class HomeScreen extends ConsumerWidget {
                           ),
                         ),
                         const Spacer(),
+                        const CastButton(),
                         IconButton(
                           icon: const Icon(Icons.settings_outlined),
                           color: AppTheme.onDarkSecondary,
