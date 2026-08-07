@@ -7,6 +7,7 @@ import 'package:tuneverse/core/di/providers.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/router/app_router.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
+import 'package:tuneverse/core/theme/default_art.dart';
 
 class MiniPlayer extends ConsumerWidget {
   const MiniPlayer({super.key});
@@ -44,15 +45,10 @@ class MiniPlayer extends ConsumerWidget {
                             ? CachedNetworkImage(
                                 imageUrl: track.artworkUrl!,
                                 fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) =>
+                                    DefaultArt.image(track.sourceId),
                               )
-                            : Container(
-                                color: AppTheme.surface,
-                                child: const Icon(
-                                  Icons.music_note_rounded,
-                                  color: AppTheme.onDarkSecondary,
-                                  size: 20,
-                                ),
-                              ),
+                            : DefaultArt.image(track.sourceId),
                       ),
                     ),
                   ),
@@ -85,6 +81,14 @@ class MiniPlayer extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.skip_previous_rounded,
+                        color: AppTheme.onDark, size: 22),
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
+                    onPressed: handler.skipToPrevious,
+                  ),
                   StreamBuilder<PlaybackState>(
                     stream: handler.playbackState,
                     builder: (context, snapshot) {
@@ -97,6 +101,9 @@ class MiniPlayer extends ConsumerWidget {
                           color: AppTheme.onDark,
                           size: 28,
                         ),
+                        padding: EdgeInsets.zero,
+                        constraints:
+                            const BoxConstraints(minWidth: 36, minHeight: 36),
                         onPressed: () {
                           if (playing) {
                             handler.pause();
@@ -106,6 +113,14 @@ class MiniPlayer extends ConsumerWidget {
                         },
                       );
                     },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.skip_next_rounded,
+                        color: AppTheme.onDark, size: 22),
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
+                    onPressed: handler.skipToNext,
                   ),
                 ],
               ),

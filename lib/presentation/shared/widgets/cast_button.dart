@@ -79,9 +79,9 @@ class _CastSheet extends ConsumerWidget {
                   color: Colors.redAccent),
               title: const Text('Disconnect',
                   style: TextStyle(color: Colors.redAccent)),
-              onTap: () {
-                service.disconnect();
-                Navigator.pop(context);
+              onTap: () async {
+                await service.disconnect();
+                if (context.mounted) Navigator.pop(context);
               },
             ),
           if (!isCasting)

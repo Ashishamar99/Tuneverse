@@ -14,6 +14,7 @@ import 'package:tuneverse/core/di/sleep_timer_provider.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/router/app_router.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
+import 'package:tuneverse/core/theme/default_art.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/presentation/player/waveform_visualiser.dart';
 import 'package:tuneverse/presentation/shared/widgets/cast_button.dart';
@@ -140,15 +141,10 @@ class PlayerScreen extends ConsumerWidget {
                             ? CachedNetworkImage(
                                 imageUrl: track.artworkUrl!,
                                 fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) =>
+                                    DefaultArt.image(track.sourceId),
                               )
-                            : Container(
-                                color: AppTheme.surfaceElevated,
-                                child: const Icon(
-                                  Icons.music_note_rounded,
-                                  color: AppTheme.onDarkSecondary,
-                                  size: 64,
-                                ),
-                              ),
+                            : DefaultArt.image(track.sourceId),
                       ),
                     ),
                   ),
@@ -266,6 +262,12 @@ class PlayerScreen extends ConsumerWidget {
                                   onPressed: () {
                                     if (playing) {
                                       handler.pause();
+                                    } else if (handler.player.audioSource ==
+                                        null) {
+                                      final t = ref.read(nowPlayingProvider);
+                                      if (t != null) {
+                                        ref.read(playTrackProvider)(t);
+                                      }
                                     } else {
                                       handler.play();
                                     }
@@ -411,7 +413,20 @@ class _FavoriteButton extends ConsumerWidget {
             ? Colors.redAccent
             : AppTheme.onDarkSecondary,
       ),
-      onPressed: () => ref.read(toggleFavoriteProvider)(track),
+      onPressed: () async {
+        final nowFav = await ref.read(toggleFavoriteProvider)(track);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  nowFav ? 'Added to Favorites' : 'Removed from Favorites'),
+              backgroundColor:
+                  nowFav ? Colors.green.shade700 : Colors.redAccent,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      },
     );
   }
 }
@@ -508,25 +523,36 @@ class _SleepTimerButton extends ConsumerWidget {
   }
 }
 
-class _CastPlayPauseButton extends ConsumerWidget {
+class _CastPlayPauseButton extends ConsumerStatefulWidget {
   final Color accentColor;
   const _CastPlayPauseButton({required this.accentColor});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CastPlayPauseButton> createState() =>
+      _CastPlayPauseButtonState();
+}
+
+class _CastPlayPauseButtonState extends ConsumerState<_CastPlayPauseButton> {
+  bool _assumePlaying = true;
+
+  @override
+  Widget build(BuildContext context) {
     final status = ref.watch(castMediaStatusProvider).valueOrNull;
-    final playing =
-        status?.playerState == CastMediaPlayerState.playing;
+    final playing = status != null
+        ? status.playerState == CastMediaPlayerState.playing
+        : _assumePlaying;
     final castService = ref.read(castServiceProvider);
 
     return _AnimatedPlayButton(
       playing: playing,
-      accentColor: accentColor,
+      accentColor: widget.accentColor,
       onPressed: () {
         if (playing) {
           castService.pause();
+          setState(() => _assumePlaying = false);
         } else {
           castService.play();
+          setState(() => _assumePlaying = true);
         }
       },
     );

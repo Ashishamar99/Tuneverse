@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuneverse/core/di/providers.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
+import 'package:tuneverse/core/theme/default_art.dart';
 import 'package:tuneverse/data/platform/audio_handler.dart';
 
 class QueueScreen extends ConsumerWidget {
@@ -77,7 +78,8 @@ class QueueScreen extends ConsumerWidget {
                       padding: const EdgeInsets.only(bottom: 16),
                       itemCount: items.length,
                       onReorderItem: (oldIndex, newIndex) {
-                        handler.skipToQueueItem(newIndex);
+                        if (oldIndex == newIndex) return;
+                        handler.moveQueueItem(oldIndex, newIndex);
                       },
                       itemBuilder: (context, index) {
                         final item = items[index];
@@ -94,7 +96,7 @@ class QueueScreen extends ConsumerWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                     child: SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
@@ -147,9 +149,10 @@ class _QueueTile extends StatelessWidget {
               ? CachedNetworkImage(
                   imageUrl: item.artUri.toString(),
                   fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => _placeholder(),
+                  errorWidget: (_, __, ___) =>
+                      DefaultArt.image(item.id),
                 )
-              : _placeholder(),
+              : DefaultArt.image(item.id),
         ),
       ),
       title: Text(
@@ -179,11 +182,4 @@ class _QueueTile extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() {
-    return Container(
-      color: AppTheme.surfaceElevated,
-      child: const Icon(Icons.music_note_rounded,
-          color: AppTheme.onDarkSecondary, size: 20),
-    );
-  }
 }

@@ -68,7 +68,7 @@ final addToPlaylistProvider = Provider((ref) {
       if (playlist == null) return;
 
       if (!playlist.trackIds.contains(entity.id)) {
-        playlist.trackIds.add(entity.id);
+        playlist.trackIds = [...playlist.trackIds, entity.id];
         playlist.updatedAt = DateTime.now();
         await isar.playlistEntitys.put(playlist);
       }
@@ -85,7 +85,7 @@ final removeFromPlaylistProvider = Provider((ref) {
     await isar.writeTxn(() async {
       final playlist = await isar.playlistEntitys.get(playlistId);
       if (playlist == null) return;
-      playlist.trackIds.remove(trackIsarId);
+      playlist.trackIds = playlist.trackIds.where((id) => id != trackIsarId).toList();
       playlist.updatedAt = DateTime.now();
       await isar.playlistEntitys.put(playlist);
     });
@@ -93,6 +93,9 @@ final removeFromPlaylistProvider = Provider((ref) {
     ref.invalidate(playlistsProvider);
   };
 });
+
+final lastPlayedInPlaylistProvider =
+    StateProvider<Map<int, String>>((ref) => {});
 
 final deletePlaylistProvider = Provider((ref) {
   final isar = ref.watch(isarProvider);

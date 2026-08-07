@@ -8,6 +8,7 @@ import 'package:tuneverse/core/di/playlist_providers.dart';
 import 'package:tuneverse/core/di/providers.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
+import 'package:tuneverse/core/theme/default_art.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 
 enum TrackContext { search, playlist, favorites, library, player }
@@ -22,9 +23,13 @@ void showTrackOptions(
   final parentContext = context;
   showModalBottomSheet(
     context: context,
+    isScrollControlled: true,
     backgroundColor: AppTheme.surfaceElevated,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    constraints: BoxConstraints(
+      maxHeight: MediaQuery.of(context).size.height * 0.75,
     ),
     builder: (ctx) => _TrackOptionsSheet(
       track: track,
@@ -54,7 +59,7 @@ class _TrackOptionsSheet extends ConsumerWidget {
     final isFavorite = isFav.valueOrNull == true;
 
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.only(top: 8, bottom: 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -74,9 +79,10 @@ class _TrackOptionsSheet extends ConsumerWidget {
                           ? CachedNetworkImage(
                               imageUrl: track.artworkUrl!,
                               fit: BoxFit.cover,
-                              errorWidget: (_, __, ___) => _artPlaceholder(),
+                              errorWidget: (_, __, ___) =>
+                                  DefaultArt.image(track.sourceId),
                             )
-                          : _artPlaceholder(),
+                          : DefaultArt.image(track.sourceId),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -157,9 +163,13 @@ class _TrackOptionsSheet extends ConsumerWidget {
                     ref.read(removeFromPlaylistProvider)(playlistId!, trackId);
                   }
                   Navigator.pop(context);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Removed from playlist')),
+                  if (parentContext.mounted) {
+                    ScaffoldMessenger.of(parentContext).showSnackBar(
+                      const SnackBar(
+                        content: Text('Removed from playlist'),
+                        backgroundColor: Colors.redAccent,
+                        duration: Duration(seconds: 2),
+                      ),
                     );
                   }
                 },
@@ -171,9 +181,22 @@ class _TrackOptionsSheet extends ConsumerWidget {
                   ? Icons.heart_broken_rounded
                   : Icons.favorite_rounded,
               label: isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
-              onTap: () {
-                ref.read(toggleFavoriteProvider)(track);
+              onTap: () async {
+                final toggle = ref.read(toggleFavoriteProvider);
                 Navigator.pop(context);
+                final nowFav = await toggle(track);
+                if (parentContext.mounted) {
+                  ScaffoldMessenger.of(parentContext).showSnackBar(
+                    SnackBar(
+                      content: Text(nowFav
+                          ? 'Added to Favorites'
+                          : 'Removed from Favorites'),
+                      backgroundColor:
+                          nowFav ? Colors.green.shade700 : Colors.redAccent,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
               },
             ),
 
@@ -202,19 +225,12 @@ class _TrackOptionsSheet extends ConsumerWidget {
     );
   }
 
-  Widget _artPlaceholder() {
-    return Container(
-      color: AppTheme.surface,
-      child: const Icon(Icons.music_note_rounded,
-          color: AppTheme.onDarkSecondary, size: 20),
-    );
-  }
 
   Future<void> _addTrackNext(WidgetRef ref, Track track) async {
     final handler = ref.read(audioHandlerProvider);
     final youtube = ref.read(youtubeSourceProvider);
     try {
-      final uri = track.localPath != null && track.isDownloaded
+      final uri = track.localPath != null && track.isLocal
           ? Uri.file(track.localPath!)
           : await youtube.getStreamUri(track, useMuxed: true);
       final item = MediaItem(
@@ -232,7 +248,7 @@ class _TrackOptionsSheet extends ConsumerWidget {
     final handler = ref.read(audioHandlerProvider);
     final youtube = ref.read(youtubeSourceProvider);
     try {
-      final uri = track.localPath != null && track.isDownloaded
+      final uri = track.localPath != null && track.isLocal
           ? Uri.file(track.localPath!)
           : await youtube.getStreamUri(track, useMuxed: true);
       final item = MediaItem(
@@ -317,8 +333,13 @@ class _TrackOptionsSheet extends ConsumerWidget {
                                     ScaffoldMessenger.of(screenContext)
                                         .showSnackBar(
                                       SnackBar(
-                                          content:
-                                              Text('Added to ${pl.name}')),
+                                        content:
+                                            Text('Added to ${pl.name}'),
+                                        backgroundColor:
+                                            Colors.green.shade700,
+                                        duration:
+                                            const Duration(seconds: 2),
+                                      ),
                                     );
                                   }
                                 },

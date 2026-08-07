@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuneverse/core/constants/app_constants.dart';
 import 'package:tuneverse/core/di/download_providers.dart';
+import 'package:tuneverse/core/di/resolver_providers.dart';
 import 'package:tuneverse/core/di/search_history_provider.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
+import 'package:tuneverse/core/theme/default_art.dart';
 import 'package:tuneverse/data/services/download_manager.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/presentation/shared/widgets/track_options_sheet.dart';
@@ -29,6 +31,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     _controller.dispose();
     super.dispose();
   }
+
+  static bool _isUrl(String query) =>
+      query.startsWith('http://') || query.startsWith('https://');
 
   void _onSearchChanged(String value) {
     _debounce?.cancel();
@@ -77,11 +82,60 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         setState(() => _query = q);
                       },
                     )
-                  : _SearchResults(query: _query),
+                  : _isUrl(_query)
+                      ? _LinkResolver(url: _query)
+                      : _SearchResults(query: _query),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _LinkResolver extends ConsumerWidget {
+  final String url;
+  const _LinkResolver({required this.url});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final result = ref.watch(resolveLinkProvider(url));
+
+    return result.when(
+      loading: () => const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Resolving link...',
+                style: TextStyle(color: AppTheme.onDarkSecondary)),
+          ],
+        ),
+      ),
+      error: (error, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Could not resolve link:\n$error',
+            style: const TextStyle(color: AppTheme.onDarkSecondary),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+      data: (tracks) {
+        if (tracks.isEmpty) {
+          return const Center(
+            child: Text('No tracks found for this link',
+                style: TextStyle(color: AppTheme.onDarkSecondary)),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          itemCount: tracks.length,
+          itemBuilder: (context, index) => _TrackTile(track: tracks[index]),
+        );
+      },
     );
   }
 }
@@ -210,28 +264,12 @@ class _TrackTile extends ConsumerWidget {
                 ? CachedNetworkImage(
                     imageUrl: track.artworkUrl!,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      color: AppTheme.surfaceElevated,
-                      child: const Icon(
-                        Icons.music_note_rounded,
-                        color: AppTheme.onDarkSecondary,
-                      ),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      color: AppTheme.surfaceElevated,
-                      child: const Icon(
-                        Icons.music_note_rounded,
-                        color: AppTheme.onDarkSecondary,
-                      ),
-                    ),
+                    placeholder: (_, __) =>
+                        DefaultArt.image(track.sourceId),
+                    errorWidget: (_, __, ___) =>
+                        DefaultArt.image(track.sourceId),
                   )
-                : Container(
-                    color: AppTheme.surfaceElevated,
-                    child: const Icon(
-                      Icons.music_note_rounded,
-                      color: AppTheme.onDarkSecondary,
-                    ),
-                  ),
+                : DefaultArt.image(track.sourceId),
           ),
         ),
       ),

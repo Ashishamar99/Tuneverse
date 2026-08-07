@@ -65,7 +65,12 @@ class CastService {
   Future<bool> connectToDevice(GoogleCastDevice device) =>
       _session.startSessionWithDevice(device);
 
-  Future<bool> disconnect() => _session.endSessionAndStopCasting();
+  Future<bool> disconnect() async {
+    final result = await _session.endSessionAndStopCasting();
+    _castingController.add(false);
+    _deviceNameController.add(null);
+    return result;
+  }
 
   Future<void> loadMedia({
     required Uri streamUri,

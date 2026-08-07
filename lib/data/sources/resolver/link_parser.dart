@@ -43,16 +43,16 @@ class LinkParser {
   );
 
   static final _ytMusicWatch = RegExp(
-    r'music\.youtube\.com/watch\?v=([a-zA-Z0-9_-]+)',
+    r'music\.youtube\.com/watch\?(?:.*&)?v=([a-zA-Z0-9_-]+)',
   );
   static final _ytMusicPlaylist = RegExp(
-    r'music\.youtube\.com/playlist\?list=([a-zA-Z0-9_-]+)',
+    r'music\.youtube\.com/playlist\?(?:.*&)?list=([a-zA-Z0-9_-]+)',
   );
   static final _youtubeWatch = RegExp(
-    r'(?:youtube\.com/watch\?v=|youtu\.be/)([a-zA-Z0-9_-]+)',
+    r'(?:youtube\.com/watch\?(?:.*&)?v=|youtu\.be/)([a-zA-Z0-9_-]+)',
   );
   static final _youtubePlaylist = RegExp(
-    r'youtube\.com/playlist\?list=([a-zA-Z0-9_-]+)',
+    r'youtube\.com/playlist\?(?:.*&)?list=([a-zA-Z0-9_-]+)',
   );
 
   static ParsedLink? parse(String url) {

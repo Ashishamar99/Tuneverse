@@ -252,6 +252,11 @@ class TuneVerseAudioHandler extends BaseAudioHandler
     );
   }
 
+  Future<void> moveQueueItem(int oldIndex, int newIndex) async {
+    if (_queueSource == null) return;
+    await _queueSource!.move(oldIndex, newIndex);
+  }
+
   Future<void> clearQueue() async {
     await _player.stop();
     _queueSource = null;

@@ -34,7 +34,7 @@ final playTrackProvider = Provider((ref) {
 
     try {
       final Uri uri;
-      if (track.localPath != null && track.isDownloaded) {
+      if (track.localPath != null && track.isLocal) {
         uri = Uri.file(track.localPath!);
         debugPrint('[TuneVerse] Playing local file: ${track.localPath}');
       } else {

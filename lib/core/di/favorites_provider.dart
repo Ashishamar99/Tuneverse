@@ -8,14 +8,17 @@ final toggleFavoriteProvider = Provider((ref) {
   final isar = ref.watch(isarProvider);
 
   return (Track track) async {
+    bool nowFavorite = false;
     await isar.writeTxn(() async {
       var entity = await isar.trackEntitys
           .getBySourceIdSourceType(track.sourceId, track.sourceType);
 
       if (entity == null) {
         entity = TrackEntity.fromDomain(track)..isFavorite = true;
+        nowFavorite = true;
       } else {
         entity.isFavorite = !entity.isFavorite;
+        nowFavorite = entity.isFavorite;
       }
 
       await isar.trackEntitys.put(entity);
@@ -23,6 +26,7 @@ final toggleFavoriteProvider = Provider((ref) {
 
     ref.invalidate(favoritesProvider);
     ref.invalidate(isFavoriteProvider(track.sourceId));
+    return nowFavorite;
   };
 });
 

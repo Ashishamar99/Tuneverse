@@ -7,6 +7,7 @@ import 'package:tuneverse/core/di/local_providers.dart';
 import 'package:tuneverse/core/di/playlist_providers.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
+import 'package:tuneverse/core/theme/default_art.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/presentation/shared/widgets/track_options_sheet.dart';
 
@@ -191,9 +192,10 @@ class _LocalTrackTile extends ConsumerWidget {
               ? QueryArtworkWidget(
                   id: mediaStoreId,
                   type: ArtworkType.AUDIO,
-                  nullArtworkWidget: _artworkPlaceholder(),
+                  nullArtworkWidget:
+                      DefaultArt.image(track.sourceId),
                 )
-              : _artworkPlaceholder(),
+              : DefaultArt.image(track.sourceId),
         ),
       ),
       title: Text(
@@ -242,15 +244,6 @@ class _LocalTrackTile extends ConsumerWidget {
     );
   }
 
-  Widget _artworkPlaceholder() {
-    return Container(
-      color: AppTheme.surfaceElevated,
-      child: const Icon(
-        Icons.music_note_rounded,
-        color: AppTheme.onDarkSecondary,
-      ),
-    );
-  }
 }
 
 class _FavoritesTab extends ConsumerWidget {
@@ -298,12 +291,11 @@ class _FavoritesTab extends ConsumerWidget {
                   height: 52,
                   child: track.artworkUrl != null &&
                           track.artworkUrl!.startsWith('http')
-                      ? Image.network(track.artworkUrl!, fit: BoxFit.cover)
-                      : Container(
-                          color: AppTheme.surfaceElevated,
-                          child: const Icon(Icons.music_note_rounded,
-                              color: AppTheme.onDarkSecondary),
-                        ),
+                      ? Image.network(track.artworkUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              DefaultArt.image(track.sourceId))
+                      : DefaultArt.image(track.sourceId),
                 ),
               ),
               title: Text(track.title,
