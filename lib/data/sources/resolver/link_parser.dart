@@ -32,6 +32,9 @@ class LinkParser {
   static final _amazonTrack = RegExp(
     r'music\.amazon\.[a-z.]+/albums/([A-Z0-9]+)\?trackAsin=([A-Z0-9]+)',
   );
+  static final _amazonDirectTrack = RegExp(
+    r'music\.amazon\.[a-z.]+/tracks/([A-Z0-9]+)',
+  );
   static final _amazonAlbum = RegExp(
     r'music\.amazon\.[a-z.]+/albums/([A-Z0-9]+)',
   );
@@ -101,6 +104,15 @@ class LinkParser {
         platform: MusicPlatform.amazonMusic,
         type: LinkType.track,
         id: '${match.group(1)}:${match.group(2)}',
+        originalUrl: url,
+      );
+    }
+    match = _amazonDirectTrack.firstMatch(url);
+    if (match != null) {
+      return ParsedLink(
+        platform: MusicPlatform.amazonMusic,
+        type: LinkType.track,
+        id: match.group(1)!,
         originalUrl: url,
       );
     }
