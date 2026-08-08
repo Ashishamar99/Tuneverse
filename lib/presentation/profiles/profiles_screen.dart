@@ -327,70 +327,73 @@ class _OptionsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(profile.accentColorValue)
-                      .withValues(alpha: 0.15),
+    return SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(profile.accentColorValue)
+                        .withValues(alpha: 0.15),
+                  ),
+                  child: Center(
+                    child: Text(
+                      profile.avatarEmoji,
+                      style: const TextStyle(fontSize: 20),
+                    ),
+                  ),
                 ),
-                child: Center(
+                const SizedBox(width: 12),
+                Expanded(
                   child: Text(
-                    profile.avatarEmoji,
-                    style: const TextStyle(fontSize: 20),
+                    profile.name,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: AppTheme.onDark,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  profile.name,
-                  style: GoogleFonts.plusJakartaSans(
-                    color: AppTheme.onDark,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const Divider(),
-        ListTile(
-          leading: const Icon(Icons.edit_outlined),
-          title: const Text('Edit Profile'),
-          onTap: () {
-            Navigator.of(context).pop();
-            onEdit();
-          },
-        ),
-        if (canDelete)
+          const Divider(),
           ListTile(
-            leading: const Icon(
-              Icons.delete_outline,
-              color: Color(0xFFCF6679),
-            ),
-            title: const Text(
-              'Delete Profile',
-              style: TextStyle(color: Color(0xFFCF6679)),
-            ),
+            leading: const Icon(Icons.edit_outlined),
+            title: const Text('Edit Profile'),
             onTap: () {
               Navigator.of(context).pop();
-              onDelete();
+              onEdit();
             },
           ),
-        const SizedBox(height: 8),
-      ],
+          if (canDelete)
+            ListTile(
+              leading: const Icon(
+                Icons.delete_outline,
+                color: Color(0xFFCF6679),
+              ),
+              title: const Text(
+                'Delete Profile',
+                style: TextStyle(color: Color(0xFFCF6679)),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                onDelete();
+              },
+            ),
+          const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 }
@@ -455,10 +458,11 @@ class _FormSheetState extends ConsumerState<_FormSheet> {
     final isEditing = widget.existing != null;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
+    final navBarInset = MediaQuery.of(context).viewPadding.bottom;
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        padding: EdgeInsets.fromLTRB(24, 0, 24, 24 + navBarInset),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,

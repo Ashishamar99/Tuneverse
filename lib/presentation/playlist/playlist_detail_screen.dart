@@ -19,9 +19,22 @@ final _playlistEntityProvider =
   return isar.playlistEntitys.get(playlistId);
 });
 
+enum PlaylistSort { added, az }
+
+final _playlistSortProvider =
+    StateProvider.family<PlaylistSort, int>((ref, _) => PlaylistSort.added);
+
 class PlaylistDetailScreen extends ConsumerWidget {
   final int playlistId;
   const PlaylistDetailScreen({super.key, required this.playlistId});
+
+  List<Track> _sorted(List<Track> tracks, PlaylistSort sort) {
+    if (sort == PlaylistSort.az) {
+      return [...tracks]..sort(
+          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    }
+    return tracks;
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,6 +44,7 @@ class PlaylistDetailScreen extends ConsumerWidget {
     final profile = ref.watch(activeProfileProvider).valueOrNull;
     final lastPlayedMap = ref.watch(lastPlayedInPlaylistProvider);
     final lastPlayedSourceId = lastPlayedMap[playlistId];
+    final sort = ref.watch(_playlistSortProvider(playlistId));
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -55,6 +69,10 @@ class PlaylistDetailScreen extends ConsumerWidget {
                 entity: entity,
                 tracks: tracks,
                 profileName: profile?.name,
+                currentSort: sort,
+                onSortChanged: (s) => ref
+                    .read(_playlistSortProvider(playlistId).notifier)
+                    .state = s,
                 onPlay: tracks.isEmpty
                     ? null
                     : () => _playFrom(ref, context, tracks,
@@ -73,7 +91,8 @@ class PlaylistDetailScreen extends ConsumerWidget {
             error: (e, _) => SliverFillRemaining(
               child: Center(child: Text('Error: $e')),
             ),
-            data: (tracks) {
+            data: (rawTracks) {
+              final tracks = _sorted(rawTracks, sort);
               if (tracks.isEmpty) {
                 return const SliverFillRemaining(
                   child: Center(
@@ -168,6 +187,8 @@ class _PlaylistHeader extends StatelessWidget {
   final PlaylistEntity? entity;
   final List<Track> tracks;
   final String? profileName;
+  final PlaylistSort currentSort;
+  final ValueChanged<PlaylistSort> onSortChanged;
   final VoidCallback? onPlay;
   final VoidCallback? onShuffle;
 
@@ -175,6 +196,8 @@ class _PlaylistHeader extends StatelessWidget {
     required this.entity,
     required this.tracks,
     this.profileName,
+    required this.currentSort,
+    required this.onSortChanged,
     this.onPlay,
     this.onShuffle,
   });
@@ -286,6 +309,24 @@ class _PlaylistHeader extends StatelessWidget {
               ],
             ),
           ],
+          if (tracks.length > 1) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _SortChip(
+                  label: 'Date Added',
+                  selected: currentSort == PlaylistSort.added,
+                  onTap: () => onSortChanged(PlaylistSort.added),
+                ),
+                const SizedBox(width: 8),
+                _SortChip(
+                  label: 'A–Z',
+                  selected: currentSort == PlaylistSort.az,
+                  onTap: () => onSortChanged(PlaylistSort.az),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -376,6 +417,43 @@ class _PlaylistTrackTile extends ConsumerWidget {
         onTap: onTap,
         onLongPress: () => showTrackOptions(context, ref, track,
             trackContext: TrackContext.playlist, playlistId: playlistId),
+      ),
+    );
+  }
+}
+
+class _SortChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SortChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.2) : AppTheme.surfaceElevated,
+          borderRadius: BorderRadius.circular(20),
+          border: selected ? Border.all(color: accent, width: 1) : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? accent : AppTheme.onDarkSecondary,
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
       ),
     );
   }

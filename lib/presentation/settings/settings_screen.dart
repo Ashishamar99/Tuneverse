@@ -23,7 +23,9 @@ class SettingsScreen extends ConsumerWidget {
         foregroundColor: AppTheme.onDark,
         title: const Text('Settings'),
       ),
-      body: ListView(
+      body: SafeArea(
+        top: false,
+        child: ListView(
         children: [
           const _SectionHeader('Profiles & Theme'),
           ListTile(
@@ -116,6 +118,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

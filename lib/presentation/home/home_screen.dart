@@ -1,10 +1,28 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:isar/isar.dart';
+import 'package:tuneverse/core/di/providers.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/router/app_router.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
+import 'package:tuneverse/core/theme/default_art.dart';
+import 'package:tuneverse/data/models/track_entity.dart';
+import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/presentation/shared/widgets/cast_button.dart';
+
+final _recentlyPlayedProvider = FutureProvider<List<Track>>((ref) async {
+  ref.watch(nowPlayingProvider);
+  final isar = ref.watch(isarProvider);
+  final entities = await isar.trackEntitys
+      .filter()
+      .lastPlayedAtIsNotNull()
+      .sortByLastPlayedAtDesc()
+      .limit(5)
+      .findAll();
+  return entities.map((e) => e.toDomain()).toList();
+});
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -166,6 +184,8 @@ class HomeScreen extends ConsumerWidget {
               ),
             ],
 
+            _RecentlyPlayedSection(playTrack: ref.read(playTrackProvider)),
+
             if (nowPlaying == null)
               const SliverFillRemaining(
                 hasScrollBody: false,
@@ -269,6 +289,91 @@ class HomeScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _RecentlyPlayedSection extends ConsumerWidget {
+  final Future<void> Function(Track) playTrack;
+  const _RecentlyPlayedSection({required this.playTrack});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recentAsync = ref.watch(_recentlyPlayedProvider);
+    final tracks = recentAsync.valueOrNull;
+    if (tracks == null || tracks.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+    return SliverMainAxisGroup(
+      slivers: [
+        const SliverPadding(
+          padding: EdgeInsets.fromLTRB(20, 28, 20, 12),
+          sliver: SliverToBoxAdapter(
+            child: Text(
+              'Recently Played',
+              style: TextStyle(
+                color: AppTheme.onDark,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final track = tracks[index];
+                final nowPlaying = ref.watch(nowPlayingProvider);
+                final isCurrent = nowPlaying?.sourceId == track.sourceId;
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 2),
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: track.artworkUrl != null &&
+                              track.artworkUrl!.startsWith('http')
+                          ? CachedNetworkImage(
+                              imageUrl: track.artworkUrl!,
+                              fit: BoxFit.cover,
+                              errorWidget: (_, __, ___) =>
+                                  DefaultArt.image(track.sourceId),
+                            )
+                          : DefaultArt.image(track.sourceId),
+                    ),
+                  ),
+                  title: Text(
+                    track.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isCurrent
+                          ? Theme.of(context).colorScheme.primary
+                          : AppTheme.onDark,
+                      fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
+                  subtitle: Text(
+                    track.artist,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppTheme.onDarkSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                  onTap: () => playTrack(track),
+                );
+              },
+              childCount: tracks.length,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

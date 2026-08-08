@@ -65,7 +65,9 @@ class _EqualizerScreenState extends ConsumerState<EqualizerScreen> {
           ),
         ],
       ),
-      body: _params == null
+      body: SafeArea(
+        top: false,
+        child: _params == null
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -117,6 +119,7 @@ class _EqualizerScreenState extends ConsumerState<EqualizerScreen> {
                 ],
               ),
             ),
+      ),
     );
   }
 }

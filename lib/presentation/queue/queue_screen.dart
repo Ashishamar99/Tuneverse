@@ -52,7 +52,9 @@ class QueueScreen extends ConsumerWidget {
         title: const Text('Queue'),
         foregroundColor: AppTheme.onDark,
       ),
-      body: StreamBuilder<List<MediaItem>>(
+      body: SafeArea(
+        top: false,
+        child: StreamBuilder<List<MediaItem>>(
         stream: handler.queue,
         builder: (context, snapshot) {
           final items = snapshot.data ?? [];
@@ -96,7 +98,7 @@ class QueueScreen extends ConsumerWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                     child: SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
@@ -117,6 +119,7 @@ class QueueScreen extends ConsumerWidget {
             },
           );
         },
+      ),
       ),
     );
   }

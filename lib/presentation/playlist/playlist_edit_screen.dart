@@ -60,6 +60,10 @@ class _PlaylistEditScreenState extends ConsumerState<PlaylistEditScreen> {
         backgroundColor: Colors.transparent,
         foregroundColor: AppTheme.onDark,
         title: const Text('Edit Order'),
+        leading: IconButton(
+          icon: const Icon(Icons.close_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           if (_changed)
             TextButton(
@@ -68,7 +72,9 @@ class _PlaylistEditScreenState extends ConsumerState<PlaylistEditScreen> {
             ),
         ],
       ),
-      body: _items == null
+      body: SafeArea(
+        top: false,
+        child: _items == null
           ? const Center(child: CircularProgressIndicator())
           : _items!.isEmpty
               ? const Center(
@@ -94,6 +100,7 @@ class _PlaylistEditScreenState extends ConsumerState<PlaylistEditScreen> {
                     );
                   },
                 ),
+      ),
     );
   }
 }

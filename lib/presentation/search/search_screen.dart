@@ -12,6 +12,8 @@ import 'package:tuneverse/core/theme/default_art.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/presentation/shared/widgets/track_options_sheet.dart';
 
+final _loadingTrackIdProvider = StateProvider<String?>((ref) => null);
+
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
@@ -249,6 +251,8 @@ class _TrackTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final nowPlaying = ref.watch(nowPlayingProvider);
     final isPlaying = nowPlaying?.sourceId == track.sourceId;
+    final loadingId = ref.watch(_loadingTrackIdProvider);
+    final isLoading = loadingId == track.sourceId;
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -259,16 +263,38 @@ class _TrackTile extends ConsumerWidget {
           child: SizedBox(
             width: 52,
             height: 52,
-            child: track.artworkUrl != null
-                ? CachedNetworkImage(
-                    imageUrl: track.artworkUrl!,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) =>
-                        DefaultArt.image(track.sourceId),
-                    errorWidget: (_, __, ___) =>
-                        DefaultArt.image(track.sourceId),
-                  )
-                : DefaultArt.image(track.sourceId),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: track.artworkUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: track.artworkUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) =>
+                              DefaultArt.image(track.sourceId),
+                          errorWidget: (_, __, ___) =>
+                              DefaultArt.image(track.sourceId),
+                        )
+                      : DefaultArt.image(track.sourceId),
+                ),
+                if (isLoading)
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black54,
+                      child: const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -316,7 +342,11 @@ class _TrackTile extends ConsumerWidget {
         ],
       ),
       onTap: () async {
+        ref.read(_loadingTrackIdProvider.notifier).state = track.sourceId;
         await ref.read(playTrackProvider)(track);
+        if (context.mounted) {
+          ref.read(_loadingTrackIdProvider.notifier).state = null;
+        }
         final error = ref.read(playbackErrorProvider);
         if (error != null && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
