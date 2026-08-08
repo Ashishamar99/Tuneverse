@@ -23,11 +23,15 @@ final nowPlayingProvider = StateProvider<Track?>((ref) => null);
 
 final playbackErrorProvider = StateProvider<String?>((ref) => null);
 
+int _playGeneration = 0;
+
 final playTrackProvider = Provider((ref) {
   return (Track track) async {
     final handler = ref.read(audioHandlerProvider);
     final youtube = ref.read(youtubeSourceProvider);
     final castService = ref.read(castServiceProvider);
+
+    final gen = ++_playGeneration;
 
     ref.read(playbackErrorProvider.notifier).state = null;
     ref.read(nowPlayingProvider.notifier).state = track;
@@ -36,26 +40,26 @@ final playTrackProvider = Provider((ref) {
       final Uri uri;
       if (track.localPath != null && track.isLocal) {
         uri = Uri.file(track.localPath!);
-        debugPrint('[TuneVerse] Playing local file: ${track.localPath}');
       } else {
-        debugPrint('[TuneVerse] Fetching stream for: ${track.title} (${track.sourceId})');
         uri = await youtube.getStreamUri(track);
-        debugPrint('[TuneVerse] Got audio-only stream URI: $uri');
       }
 
-      // Cast path: send media to Chromecast instead of local player
+      if (gen != _playGeneration) return;
+
       if (castService.isCasting) {
-        debugPrint('[TuneVerse] Casting to ${castService.connectedDeviceName}');
         await handler.pause();
+        final castUri = (track.localPath != null && track.isLocal)
+            ? uri
+            : await youtube.getStreamUri(track, useMuxed: true);
+        if (gen != _playGeneration) return;
         await castService.loadMedia(
-          streamUri: uri,
+          streamUri: castUri,
           title: track.title,
           artist: track.artist,
           artworkUrl: track.artworkUrl,
           duration: track.duration,
         );
         handler.recordPlay(track);
-        debugPrint('[TuneVerse] Cast playback started');
         return;
       }
 
@@ -67,24 +71,22 @@ final playTrackProvider = Provider((ref) {
         artUri: track.artworkUrl != null ? Uri.parse(track.artworkUrl!) : null,
       );
 
-      debugPrint('[TuneVerse] Setting audio source and playing...');
       try {
         await handler.playTrack(mediaItem, uri);
       } catch (playErr) {
+        if (gen != _playGeneration) return;
         if (track.localPath == null || !track.isDownloaded) {
-          debugPrint('[TuneVerse] Audio-only failed ($playErr), retrying with muxed stream...');
           final muxedUri = await youtube.getStreamUri(track, useMuxed: true);
-          debugPrint('[TuneVerse] Got muxed stream URI: $muxedUri');
+          if (gen != _playGeneration) return;
           await handler.playTrack(mediaItem, muxedUri);
         } else {
           rethrow;
         }
       }
       handler.recordPlay(track);
-      debugPrint('[TuneVerse] Playback started successfully');
     } catch (e, st) {
-      debugPrint('[TuneVerse] PLAYBACK ERROR: $e');
-      debugPrint('[TuneVerse] Stack trace: $st');
+      debugPrint('[TuneVerse] PLAYBACK ERROR: $e\n$st');
+      if (gen != _playGeneration) return;
       ref.read(playbackErrorProvider.notifier).state = e.toString();
       ref.read(nowPlayingProvider.notifier).state = null;
     }
