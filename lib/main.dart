@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:tuneverse/core/di/cast_providers.dart';
+import 'package:tuneverse/core/di/favorites_provider.dart';
+import 'package:tuneverse/core/di/profile_providers.dart';
 import 'package:tuneverse/core/di/providers.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/router/app_router.dart';
@@ -85,8 +88,9 @@ class _TuneVerseAppState extends ConsumerState<TuneVerseApp> {
       ref.read(activeProfileIdProvider.notifier).state =
           widget.initialProfileId;
 
-      // Sync nowPlayingProvider with handler's current track on queue advance
       final handler = ref.read(audioHandlerProvider);
+
+      // Sync nowPlayingProvider with handler's current track on queue advance
       handler.mediaItem.listen((item) {
         if (item == null) return;
         final current = ref.read(nowPlayingProvider);
@@ -101,6 +105,31 @@ class _TuneVerseAppState extends ConsumerState<TuneVerseApp> {
           sourceId: item.id,
         );
       });
+
+      // Wire cast mode to notification controls
+      final castService = ref.read(castServiceProvider);
+      Duration lastCastPos = Duration.zero;
+      castService.castPositionStream.listen((pos) => lastCastPos = pos);
+      castService.isCastingStream.listen((casting) {
+        handler.setCasting(
+          casting,
+          onSeek: casting
+              ? (delta) {
+                  final target = lastCastPos + delta;
+                  castService.seek(
+                      target < Duration.zero ? Duration.zero : target);
+                }
+              : null,
+        );
+      });
+
+      // Wire favorite toggle for Android Auto
+      handler.setFavoriteCallback(() {
+        final track = ref.read(nowPlayingProvider);
+        if (track != null) {
+          ref.read(toggleFavoriteProvider)(track);
+        }
+      });
     });
   }
 
@@ -110,7 +139,11 @@ class _TuneVerseAppState extends ConsumerState<TuneVerseApp> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = AppTheme.dark(AppTheme.fallbackAccent);
+    final profile = ref.watch(activeProfileProvider).valueOrNull;
+    final accent = profile != null
+        ? Color(profile.accentColorValue)
+        : AppTheme.fallbackAccent;
+    final theme = AppTheme.dark(accent);
 
     if (!_setupComplete) {
       return MaterialApp(

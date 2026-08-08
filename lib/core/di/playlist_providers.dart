@@ -97,6 +97,37 @@ final removeFromPlaylistProvider = Provider((ref) {
 final lastPlayedInPlaylistProvider =
     StateProvider<Map<int, String>>((ref) => {});
 
+final renamePlaylistProvider = Provider((ref) {
+  final isar = ref.watch(isarProvider);
+
+  return (int playlistId, String newName) async {
+    await isar.writeTxn(() async {
+      final playlist = await isar.playlistEntitys.get(playlistId);
+      if (playlist == null) return;
+      playlist.name = newName;
+      playlist.updatedAt = DateTime.now();
+      await isar.playlistEntitys.put(playlist);
+    });
+    ref.invalidate(playlistsProvider);
+  };
+});
+
+final reorderPlaylistProvider = Provider((ref) {
+  final isar = ref.watch(isarProvider);
+
+  return (int playlistId, List<int> newTrackIds) async {
+    await isar.writeTxn(() async {
+      final playlist = await isar.playlistEntitys.get(playlistId);
+      if (playlist == null) return;
+      playlist.trackIds = newTrackIds;
+      playlist.updatedAt = DateTime.now();
+      await isar.playlistEntitys.put(playlist);
+    });
+    ref.invalidate(playlistTracksProvider(playlistId));
+    ref.invalidate(playlistsProvider);
+  };
+});
+
 final deletePlaylistProvider = Provider((ref) {
   final isar = ref.watch(isarProvider);
 

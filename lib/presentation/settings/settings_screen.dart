@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tuneverse/core/di/profile_providers.dart';
 import 'package:tuneverse/core/di/search_history_provider.dart';
+import 'package:tuneverse/core/router/app_router.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -11,6 +14,8 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(activeProfileProvider).valueOrNull;
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -20,6 +25,28 @@ class SettingsScreen extends ConsumerWidget {
       ),
       body: ListView(
         children: [
+          const _SectionHeader('Profiles & Theme'),
+          ListTile(
+            leading: profile != null
+                ? CircleAvatar(
+                    radius: 16,
+                    backgroundColor:
+                        Color(profile.accentColorValue).withValues(alpha: 0.2),
+                    child: Text(profile.avatarEmoji,
+                        style: const TextStyle(fontSize: 18)),
+                  )
+                : const Icon(Icons.person_rounded,
+                    color: AppTheme.onDarkSecondary),
+            title: Text(profile?.name ?? 'Profile',
+                style: const TextStyle(color: AppTheme.onDark)),
+            subtitle: const Text('Switch profile, change theme color',
+                style:
+                    TextStyle(color: AppTheme.onDarkSecondary, fontSize: 12)),
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: AppTheme.onDarkSecondary),
+            onTap: () => context.push(AppRoutes.profiles),
+          ),
+          const Divider(height: 1, color: AppTheme.surfaceElevated),
           const _SectionHeader('Storage'),
           ListTile(
             leading:

@@ -34,7 +34,7 @@ class PlaylistDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      bottomNavigationBar: const MiniPlayer(),
+      bottomNavigationBar: const SafeArea(child: MiniPlayer()),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -374,8 +374,9 @@ class _PlaylistTrackTile extends ConsumerWidget {
               color: AppTheme.onDarkSecondary, size: 20),
         ),
         onTap: onTap,
+        onLongPress: () => showTrackOptions(context, ref, track,
+            trackContext: TrackContext.playlist, playlistId: playlistId),
       ),
     );
   }
-
 }

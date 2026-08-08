@@ -12,6 +12,7 @@ import 'package:tuneverse/presentation/player/player_screen.dart';
 import 'package:tuneverse/presentation/profiles/profiles_screen.dart';
 import 'package:tuneverse/presentation/equalizer/equalizer_screen.dart';
 import 'package:tuneverse/presentation/playlist/playlist_detail_screen.dart';
+import 'package:tuneverse/presentation/playlist/playlist_edit_screen.dart';
 import 'package:tuneverse/presentation/queue/queue_screen.dart';
 import 'package:tuneverse/presentation/search/search_screen.dart';
 import 'package:tuneverse/presentation/settings/settings_screen.dart';
@@ -52,10 +53,6 @@ final appRouter = GoRouter(
           path: AppRoutes.library,
           builder: (context, state) => const LibraryScreen(),
         ),
-        GoRoute(
-          path: AppRoutes.profiles,
-          builder: (context, state) => const ProfilesScreen(),
-        ),
       ],
     ),
     GoRoute(
@@ -94,6 +91,19 @@ final appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       path: AppRoutes.settings,
       builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: AppRoutes.profiles,
+      builder: (context, state) => const ProfilesScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/playlist/:id/edit',
+      builder: (context, state) {
+        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+        return PlaylistEditScreen(playlistId: id);
+      },
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,

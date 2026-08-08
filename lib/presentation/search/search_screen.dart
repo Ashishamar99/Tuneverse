@@ -3,13 +3,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuneverse/core/constants/app_constants.dart';
-import 'package:tuneverse/core/di/download_providers.dart';
+import 'package:tuneverse/core/di/favorites_provider.dart';
 import 'package:tuneverse/core/di/resolver_providers.dart';
 import 'package:tuneverse/core/di/search_history_provider.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/core/theme/default_art.dart';
-import 'package:tuneverse/data/services/download_manager.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/presentation/shared/widgets/track_options_sheet.dart';
 
@@ -305,7 +304,7 @@ class _TrackTile extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 4),
-          _DownloadButton(track: track),
+          _FavoriteButton(track: track),
           GestureDetector(
             onTap: () => showTrackOptions(context, ref, track),
             child: const Padding(
@@ -334,41 +333,34 @@ class _TrackTile extends ConsumerWidget {
 }
 
 
-class _DownloadButton extends ConsumerWidget {
+class _FavoriteButton extends ConsumerWidget {
   final Track track;
-  const _DownloadButton({required this.track});
+  const _FavoriteButton({required this.track});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final downloaded = ref.watch(isDownloadedProvider(track.sourceId));
-    if (downloaded) {
-      return const Icon(
-        Icons.download_done_rounded,
-        color: AppTheme.onDarkSecondary,
-        size: 20,
-      );
-    }
-
-    final progress = ref.watch(downloadProgressProvider).valueOrNull;
-    final isThisTrack = progress?.trackId == track.sourceId;
-
-    if (isThisTrack && progress!.status == DownloadStatus.downloading) {
-      return SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(
-          value: progress.progress > 0 ? progress.progress : null,
-          strokeWidth: 2,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-      );
-    }
+    final isFav = ref.watch(isFavoriteProvider(track.sourceId));
 
     return GestureDetector(
-      onTap: () => ref.read(startDownloadProvider)(track),
-      child: const Icon(
-        Icons.download_rounded,
-        color: AppTheme.onDarkSecondary,
+      onTap: () async {
+        final nowFav = await ref.read(toggleFavoriteProvider)(track);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(nowFav ? 'Added to favorites' : 'Removed from favorites'),
+              backgroundColor: nowFav ? Colors.green.shade700 : Colors.red.shade700,
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        }
+      },
+      child: Icon(
+        isFav.valueOrNull == true
+            ? Icons.favorite_rounded
+            : Icons.favorite_border_rounded,
+        color: isFav.valueOrNull == true
+            ? Colors.redAccent
+            : AppTheme.onDarkSecondary,
         size: 20,
       ),
     );

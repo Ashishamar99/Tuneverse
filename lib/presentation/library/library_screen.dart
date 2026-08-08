@@ -6,6 +6,7 @@ import 'package:tuneverse/core/di/favorites_provider.dart';
 import 'package:tuneverse/core/di/local_providers.dart';
 import 'package:tuneverse/core/di/playlist_providers.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
+import 'package:tuneverse/data/models/playlist_entity.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/core/theme/default_art.dart';
 import 'package:tuneverse/domain/entities/track.dart';
@@ -241,9 +242,10 @@ class _LocalTrackTile extends ConsumerWidget {
       onTap: () {
         ref.read(playLocalTrackProvider)(track);
       },
+      onLongPress: () => showTrackOptions(context, ref, track,
+          trackContext: TrackContext.library),
     );
   }
-
 }
 
 class _FavoritesTab extends ConsumerWidget {
@@ -315,6 +317,8 @@ class _FavoritesTab extends ConsumerWidget {
                     color: AppTheme.onDarkSecondary, size: 20),
               ),
               onTap: () => ref.read(playTrackProvider)(track),
+              onLongPress: () => showTrackOptions(context, ref, track,
+                  trackContext: TrackContext.favorites),
             );
           },
         );
@@ -383,14 +387,62 @@ class _PlaylistsTab extends ConsumerWidget {
                       subtitle: Text('${pl.trackIds.length} tracks',
                           style: const TextStyle(
                               color: AppTheme.onDarkSecondary, fontSize: 13)),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded,
+                      trailing: PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert_rounded,
                             color: AppTheme.onDarkSecondary, size: 20),
-                        onPressed: () {
-                          ref.read(deletePlaylistProvider)(pl.id);
+                        color: AppTheme.surfaceElevated,
+                        onSelected: (value) {
+                          switch (value) {
+                            case 'rename':
+                              _showRenameDialog(context, ref, pl);
+                            case 'edit_order':
+                              context.push('/playlist/${pl.id}/edit');
+                            case 'delete':
+                              ref.read(deletePlaylistProvider)(pl.id);
+                          }
                         },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(
+                            value: 'rename',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit_rounded,
+                                    color: AppTheme.onDarkSecondary, size: 20),
+                                SizedBox(width: 12),
+                                Text('Rename',
+                                    style: TextStyle(color: AppTheme.onDark)),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'edit_order',
+                            child: Row(
+                              children: [
+                                Icon(Icons.reorder_rounded,
+                                    color: AppTheme.onDarkSecondary, size: 20),
+                                SizedBox(width: 12),
+                                Text('Edit Order',
+                                    style: TextStyle(color: AppTheme.onDark)),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_outline_rounded,
+                                    color: Colors.redAccent, size: 20),
+                                SizedBox(width: 12),
+                                Text('Delete',
+                                    style: TextStyle(color: Colors.redAccent)),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                       onTap: () => context.push('/playlist/${pl.id}'),
+                      onLongPress: () =>
+                          _showPlaylistOptions(context, ref, pl),
                     );
                   },
                   childCount: items.length,
@@ -399,6 +451,91 @@ class _PlaylistsTab extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+
+  void _showPlaylistOptions(
+      BuildContext context, WidgetRef ref, PlaylistEntity pl) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.edit_rounded,
+                  color: AppTheme.onDarkSecondary),
+              title: const Text('Rename',
+                  style: TextStyle(color: AppTheme.onDark)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showRenameDialog(context, ref, pl);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.reorder_rounded,
+                  color: AppTheme.onDarkSecondary),
+              title: const Text('Edit Order',
+                  style: TextStyle(color: AppTheme.onDark)),
+              onTap: () {
+                Navigator.pop(ctx);
+                context.push('/playlist/${pl.id}/edit');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded,
+                  color: Colors.redAccent),
+              title: const Text('Delete',
+                  style: TextStyle(color: Colors.redAccent)),
+              onTap: () {
+                Navigator.pop(ctx);
+                ref.read(deletePlaylistProvider)(pl.id);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRenameDialog(
+      BuildContext context, WidgetRef ref, PlaylistEntity pl) {
+    final controller = TextEditingController(text: pl.name);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceElevated,
+        title: const Text('Rename Playlist',
+            style: TextStyle(color: AppTheme.onDark)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: AppTheme.onDark),
+          decoration: const InputDecoration(hintText: 'Playlist name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                ref.read(renamePlaylistProvider)(pl.id, name);
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 

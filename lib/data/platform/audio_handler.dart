@@ -1,6 +1,7 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:isar/isar.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:tuneverse/data/models/playlist_entity.dart';
 import 'package:tuneverse/data/models/track_entity.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 
@@ -11,8 +12,17 @@ class TuneVerseAudioHandler extends BaseAudioHandler
   final Isar _isar;
   Future<Uri> Function(String sourceId, {bool useMuxed})? _youtubeResolver;
 
+  bool _isCasting = false;
+  void Function(Duration)? _castSeekCallback;
+
   static const _recentId = 'recent';
   static const _libraryId = 'library';
+  static const _playlistsId = 'playlists';
+  static const _playlistPrefix = 'playlist_';
+
+  static const seekBackwardAction = 'seekBackward10';
+  static const seekForwardAction = 'seekForward10';
+  static const toggleFavoriteAction = 'toggleFavorite';
 
   void setYouTubeResolver(
       Future<Uri> Function(String sourceId, {bool useMuxed}) resolver) {
@@ -20,6 +30,18 @@ class TuneVerseAudioHandler extends BaseAudioHandler
   }
 
   AndroidEqualizer get equalizer => _equalizer;
+
+  void setCasting(bool casting, {
+    void Function(Duration)? onSeek,
+  }) {
+    _isCasting = casting;
+    _castSeekCallback = onSeek;
+    _player.playbackEventStream.first.then((e) {
+      playbackState.add(_transformEvent(e));
+    });
+  }
+
+  bool get isCasting => _isCasting;
 
   TuneVerseAudioHandler(this._isar) {
     _player = AudioPlayer(
@@ -60,12 +82,24 @@ class TuneVerseAudioHandler extends BaseAudioHandler
             title: 'Library',
             playable: false,
           ),
+          const MediaItem(
+            id: _playlistsId,
+            title: 'Playlists',
+            playable: false,
+          ),
         ];
       case _recentId:
         return _recentTracks();
       case _libraryId:
         return _libraryTracks();
+      case _playlistsId:
+        return _playlistItems();
       default:
+        if (parentMediaId.startsWith(_playlistPrefix)) {
+          final id = int.tryParse(
+              parentMediaId.substring(_playlistPrefix.length));
+          if (id != null) return _playlistTracks(id);
+        }
         return [];
     }
   }
@@ -88,6 +122,30 @@ class TuneVerseAudioHandler extends BaseAudioHandler
         .limit(100)
         .findAll();
     return entities.map(_entityToMediaItem).toList();
+  }
+
+  Future<List<MediaItem>> _playlistItems() async {
+    final playlists = await _isar.playlistEntitys
+        .where()
+        .sortByUpdatedAtDesc()
+        .limit(50)
+        .findAll();
+    return playlists.map((pl) => MediaItem(
+      id: '$_playlistPrefix${pl.id}',
+      title: pl.name,
+      playable: false,
+    )).toList();
+  }
+
+  Future<List<MediaItem>> _playlistTracks(int playlistId) async {
+    final playlist = await _isar.playlistEntitys.get(playlistId);
+    if (playlist == null) return [];
+    final items = <MediaItem>[];
+    for (final trackId in playlist.trackIds) {
+      final entity = await _isar.trackEntitys.get(trackId);
+      if (entity != null) items.add(_entityToMediaItem(entity));
+    }
+    return items;
   }
 
   MediaItem _entityToMediaItem(TrackEntity e) {
@@ -159,6 +217,36 @@ class TuneVerseAudioHandler extends BaseAudioHandler
     final item = _entityToMediaItem(entity);
     await playTrack(item, uri);
     recordPlay(entity.toDomain());
+  }
+
+  // --- Custom actions (Android Auto + cast notification) ---
+
+  @override
+  Future<void> customAction(String name, [Map<String, dynamic>? extras]) async {
+    switch (name) {
+      case seekBackwardAction:
+        if (_isCasting && _castSeekCallback != null) {
+          _castSeekCallback!(const Duration(seconds: -10));
+        } else {
+          final pos = _player.position - const Duration(seconds: 10);
+          await _player.seek(pos < Duration.zero ? Duration.zero : pos);
+        }
+      case seekForwardAction:
+        if (_isCasting && _castSeekCallback != null) {
+          _castSeekCallback!(const Duration(seconds: 10));
+        } else {
+          final pos = _player.position + const Duration(seconds: 10);
+          final dur = _player.duration;
+          await _player.seek(dur != null && pos > dur ? dur : pos);
+        }
+      case toggleFavoriteAction:
+        _onToggleFavorite?.call();
+    }
+  }
+
+  void Function()? _onToggleFavorite;
+  void setFavoriteCallback(void Function() callback) {
+    _onToggleFavorite = callback;
   }
 
   // --- Playback controls ---
@@ -271,18 +359,42 @@ class TuneVerseAudioHandler extends BaseAudioHandler
   Stream<Duration?> get durationStream => _player.durationStream;
 
   PlaybackState _transformEvent(PlaybackEvent event) {
-    return PlaybackState(
-      controls: [
+    final controls = <MediaControl>[];
+
+    if (_isCasting) {
+      controls.addAll([
+        MediaControl.skipToPrevious,
+        MediaControl.custom(
+          androidIcon: 'drawable/audio_service_fast_rewind',
+          label: '-10s',
+          name: seekBackwardAction,
+        ),
+        if (_player.playing) MediaControl.pause else MediaControl.play,
+        MediaControl.custom(
+          androidIcon: 'drawable/audio_service_fast_forward',
+          label: '+10s',
+          name: seekForwardAction,
+        ),
+        MediaControl.skipToNext,
+      ]);
+    } else {
+      controls.addAll([
         MediaControl.skipToPrevious,
         if (_player.playing) MediaControl.pause else MediaControl.play,
         MediaControl.skipToNext,
-      ],
+      ]);
+    }
+
+    return PlaybackState(
+      controls: controls,
       systemActions: const {
         MediaAction.seek,
         MediaAction.seekForward,
         MediaAction.seekBackward,
       },
-      androidCompactActionIndices: const [0, 1, 2],
+      androidCompactActionIndices: _isCasting
+          ? const [0, 2, 4]
+          : const [0, 1, 2],
       processingState: {
         ProcessingState.idle: AudioProcessingState.idle,
         ProcessingState.loading: AudioProcessingState.loading,
