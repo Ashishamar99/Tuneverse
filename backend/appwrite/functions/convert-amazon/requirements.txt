@@ -1,2 +1,2 @@
 appwrite>=6.0.0
-amazon-music>=0.1.0
+amazon-music>=1.7.0

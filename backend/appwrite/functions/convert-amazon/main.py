@@ -1,14 +1,18 @@
 """
 Appwrite Function: convert-amazon
-Extracts playlists from Amazon Music using session cookies.
+Extracts tracks from an Amazon Music playlist using the amz library.
 
 Trigger: HTTP POST
-Input: { "cookies": "...", "playlistFilter": ["id1", "id2"] (optional) }
+Input: {
+  "playlistId": "...",
+  "accessToken": "...",
+  "apiUrl": "https://amz.dezalty.com" (optional, default proxy)
+}
 Output: Creates/updates import_jobs and import_progress documents.
 
-Uses the unofficial Jaffa/amazon-music Python library.
-Amazon's official API is closed beta — cookie-based session is the
-only viable path without partner approval.
+The amz library (pip: amazon-music) connects to a proxy API that
+fetches data from Amazon Music. Users provide their access_token
+obtained from their Amazon Music web session.
 """
 
 import json
@@ -25,6 +29,7 @@ DATABASE_ID = os.environ.get("APPWRITE_DATABASE_ID", "tuneverse")
 IMPORT_JOBS_COLLECTION = "import_jobs"
 IMPORT_PROGRESS_COLLECTION = "import_progress"
 JOB_TTL_DAYS = 7
+DEFAULT_API_URL = "https://amz.dezalty.com"
 
 
 def main(context):
@@ -40,16 +45,16 @@ def main(context):
     except json.JSONDecodeError:
         return context.res.json({"error": "Invalid JSON body"}, 400)
 
-    cookies = body.get("cookies")
+    playlist_id = body.get("playlistId")
+    access_token = body.get("accessToken", "")
+    api_url = body.get("apiUrl", DEFAULT_API_URL)
     user_id = context.req.headers.get("x-appwrite-user-id")
 
-    if not cookies:
-        return context.res.json({"error": "Missing 'cookies' field"}, 400)
+    if not playlist_id:
+        return context.res.json({"error": "Missing 'playlistId' field"}, 400)
 
     if not user_id:
         return context.res.json({"error": "Authentication required"}, 401)
-
-    playlist_filter = body.get("playlistFilter")
 
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(days=JOB_TTL_DAYS)
@@ -94,8 +99,8 @@ def main(context):
     )
 
     try:
-        playlists_data = _extract_playlists(
-            cookies, playlist_filter, db, job_id, progress_id, user_id
+        playlist_data = _extract_playlist(
+            api_url, access_token, playlist_id, db, progress_id
         )
 
         db.update_document(
@@ -104,15 +109,16 @@ def main(context):
             document_id=job_id,
             data={
                 "status": "completed",
-                "playlists": json.dumps(playlists_data),
+                "playlists": json.dumps([playlist_data]),
             },
         )
 
         return context.res.json({
             "jobId": job_id,
             "status": "completed",
-            "playlistCount": len(playlists_data),
-            "totalTracks": sum(len(p["tracks"]) for p in playlists_data),
+            "playlistName": playlist_data["name"],
+            "totalTracks": playlist_data["totalTracks"],
+            "tracks": playlist_data["tracks"],
         })
 
     except Exception as e:
@@ -125,55 +131,51 @@ def main(context):
         return context.res.json({"error": str(e), "jobId": job_id}, 500)
 
 
-def _extract_playlists(cookies, playlist_filter, db, job_id, progress_id, user_id):
-    """Extract playlists from Amazon Music using session cookies."""
-    from amazonmusic import AmazonMusic
+def _extract_playlist(api_url, access_token, playlist_id, db, progress_id):
+    """Extract a single playlist from Amazon Music using the amz library."""
+    from amz.api import API
 
-    am = AmazonMusic(cookies=cookies)
-    raw_playlists = am.get_playlists()
+    api = API(api_url, access_token=access_token)
+    result = api.get_playlist(playlist_id)
 
-    if playlist_filter:
-        raw_playlists = [p for p in raw_playlists if p.id in playlist_filter]
+    playlist_name = getattr(result, "title", None) or getattr(result, "name", "Amazon Playlist")
+    raw_tracks = getattr(result, "tracks", [])
 
-    results = []
+    if hasattr(raw_tracks, "toDict"):
+        raw_tracks = list(raw_tracks)
 
-    for pl in raw_playlists:
-        tracks_raw = am.get_playlist_tracks(pl.id)
-        total = len(tracks_raw)
+    total = len(raw_tracks)
+    _update_progress(db, progress_id, {
+        "currentPlaylist": str(playlist_name),
+        "totalTracks": total,
+    })
 
-        _update_progress(db, progress_id, {
-            "currentPlaylist": pl.name,
-            "processedTracks": 0,
-            "totalTracks": total,
+    tracks = []
+    for i, t in enumerate(raw_tracks):
+        track_title = getattr(t, "title", None) or getattr(t, "name", "Unknown")
+        track_artist = getattr(t, "artist", None) or getattr(t, "artists", "Unknown")
+        track_album = getattr(t, "album", None)
+
+        if isinstance(track_artist, list):
+            track_artist = ", ".join(str(a) for a in track_artist)
+
+        tracks.append({
+            "originalTitle": str(track_title),
+            "originalArtist": str(track_artist),
+            "originalAlbum": str(track_album) if track_album else None,
         })
 
-        tracks = []
-        for i, t in enumerate(tracks_raw):
-            tracks.append({
-                "originalTitle": t.title,
-                "originalArtist": t.artist,
-                "originalAlbum": getattr(t, "album", None),
-                "originalDurationMs": getattr(t, "duration_ms", None),
-                "matchedSourceId": None,
-                "matchConfidence": "pending",
-                "matchedTitle": None,
+        if (i + 1) % 5 == 0 or i == total - 1:
+            _update_progress(db, progress_id, {
+                "processedTracks": i + 1,
+                "lastMatchedTrack": f"{track_title} — {track_artist}",
             })
 
-            if (i + 1) % 5 == 0 or i == total - 1:
-                _update_progress(db, progress_id, {
-                    "processedTracks": i + 1,
-                    "lastMatchedTrack": f"{t.title} — {t.artist}",
-                })
-
-        results.append({
-            "name": pl.name,
-            "totalTracks": total,
-            "matched": 0,
-            "notFound": 0,
-            "tracks": tracks,
-        })
-
-    return results
+    return {
+        "name": str(playlist_name),
+        "totalTracks": total,
+        "tracks": tracks,
+    }
 
 
 def _update_progress(db, progress_id, data):

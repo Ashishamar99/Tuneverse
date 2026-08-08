@@ -196,6 +196,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const Divider(height: 1, color: AppTheme.surfaceElevated),
 
+          // ---------------------------------------------------------------
+          // Import
+          // ---------------------------------------------------------------
+          const _SectionHeader('Import'),
+          ListTile(
+            leading: const Icon(Icons.playlist_add_rounded,
+                color: AppTheme.onDarkSecondary),
+            title: const Text('Import Playlist',
+                style: TextStyle(color: AppTheme.onDark)),
+            subtitle: const Text(
+                'Convert playlists from Amazon Music, Spotify & more',
+                style:
+                    TextStyle(color: AppTheme.onDarkSecondary, fontSize: 12)),
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: AppTheme.onDarkSecondary),
+            onTap: () => context.push(AppRoutes.importPlaylist),
+          ),
+          const Divider(height: 1, color: AppTheme.surfaceElevated),
+
           const _SectionHeader('Storage'),
           ListTile(
             leading:

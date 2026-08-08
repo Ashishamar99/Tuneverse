@@ -16,6 +16,7 @@ import 'package:tuneverse/presentation/playlist/playlist_edit_screen.dart';
 import 'package:tuneverse/presentation/queue/queue_screen.dart';
 import 'package:tuneverse/presentation/search/search_screen.dart';
 import 'package:tuneverse/presentation/settings/settings_screen.dart';
+import 'package:tuneverse/presentation/import/import_playlist_screen.dart';
 import 'package:tuneverse/presentation/shared/widgets/scaffold_with_nav.dart';
 
 class AppRoutes {
@@ -28,6 +29,7 @@ class AppRoutes {
   static const equalizer = '/equalizer';
   static const settings = '/settings';
   static const resolve = '/resolve';
+  static const importPlaylist = '/import';
 }
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -103,6 +105,11 @@ final appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       path: AppRoutes.profiles,
       builder: (context, state) => const ProfilesScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: AppRoutes.importPlaylist,
+      builder: (context, state) => const ImportPlaylistScreen(),
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,
