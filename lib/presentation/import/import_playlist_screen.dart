@@ -13,19 +13,54 @@ class ImportPlaylistScreen extends ConsumerStatefulWidget {
       _ImportPlaylistScreenState();
 }
 
-class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen> {
+class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  final _urlController = TextEditingController();
+  final _tokenController = TextEditingController();
   final _nameController = TextEditingController(text: 'Imported Playlist');
   final _tracksController = TextEditingController();
   bool _parsed = false;
+  bool _showTokenHelp = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
 
   @override
   void dispose() {
+    _tabController.dispose();
+    _urlController.dispose();
+    _tokenController.dispose();
     _nameController.dispose();
     _tracksController.dispose();
     super.dispose();
   }
 
-  void _parse() {
+  Future<void> _fetchFromUrl() async {
+    final url = _urlController.text.trim();
+    final token = _tokenController.text.trim();
+    if (url.isEmpty) return;
+
+    if (parseAmazonPlaylistId(url) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Not a valid Amazon Music playlist URL')),
+      );
+      return;
+    }
+
+    final success = await ref
+        .read(importNotifierProvider.notifier)
+        .fetchFromUrl(url, token);
+
+    if (success && mounted) {
+      setState(() => _parsed = true);
+    }
+  }
+
+  void _parseManual() {
     final text = _tracksController.text.trim();
     if (text.isEmpty) return;
 
@@ -80,12 +115,241 @@ class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: _parsed ? _buildMatchView(state) : _buildInputView(),
+        child: _parsed ? _buildMatchView(state) : _buildInputView(state),
       ),
     );
   }
 
-  Widget _buildInputView() {
+  Widget _buildInputView(ImportState state) {
+    return Column(
+      children: [
+        Container(
+          color: AppTheme.surface,
+          child: TabBar(
+            controller: _tabController,
+            indicatorColor: AppTheme.fallbackAccent,
+            labelColor: AppTheme.onDark,
+            unselectedLabelColor: AppTheme.onDarkSecondary,
+            labelStyle: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+            tabs: const [
+              Tab(
+                icon: Icon(Icons.link_rounded, size: 20),
+                text: 'From URL',
+              ),
+              Tab(
+                icon: Icon(Icons.edit_note_rounded, size: 20),
+                text: 'Manual',
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildUrlTab(state),
+              _buildManualTab(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUrlTab(ImportState state) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Amazon Music',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.onDark,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Paste your Amazon Music playlist link. Requires an access token from your Amazon Music web session.',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              color: AppTheme.onDarkSecondary,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _urlController,
+            style: const TextStyle(color: AppTheme.onDark, fontSize: 14),
+            decoration: InputDecoration(
+              labelText: 'Playlist URL',
+              labelStyle: const TextStyle(color: AppTheme.onDarkSecondary),
+              hintText: 'https://music.amazon.in/user-playlists/...',
+              hintStyle: TextStyle(
+                  color: AppTheme.onDarkSecondary.withValues(alpha: 0.4)),
+              filled: true,
+              fillColor: AppTheme.surface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              prefixIcon: const Icon(Icons.link_rounded,
+                  color: AppTheme.onDarkSecondary, size: 20),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _tokenController,
+            style: const TextStyle(color: AppTheme.onDark, fontSize: 14),
+            obscureText: true,
+            decoration: InputDecoration(
+              labelText: 'Access Token',
+              labelStyle: const TextStyle(color: AppTheme.onDarkSecondary),
+              hintText: 'Paste your Amazon Music access token',
+              hintStyle: TextStyle(
+                  color: AppTheme.onDarkSecondary.withValues(alpha: 0.4)),
+              filled: true,
+              fillColor: AppTheme.surface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              prefixIcon: const Icon(Icons.key_rounded,
+                  color: AppTheme.onDarkSecondary, size: 20),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => setState(() => _showTokenHelp = !_showTokenHelp),
+            child: Row(
+              children: [
+                Icon(
+                  _showTokenHelp
+                      ? Icons.expand_less_rounded
+                      : Icons.help_outline_rounded,
+                  color: AppTheme.fallbackAccent,
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'How do I get my access token?',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    color: AppTheme.fallbackAccent,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_showTokenHelp) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.fallbackAccent.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Text(
+                '1. Open music.amazon.in in Chrome\n'
+                '2. Sign in with your Amazon/Prime account\n'
+                '3. Press F12 → Network tab\n'
+                '4. Play any song or open a playlist\n'
+                '5. Look for API requests → find the "Authorization" header\n'
+                '6. Copy the token after "Bearer "',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  color: AppTheme.onDarkSecondary,
+                  height: 1.6,
+                ),
+              ),
+            ),
+          ],
+          if (state.error != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline,
+                      color: Colors.redAccent, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      state.error!,
+                      style: const TextStyle(
+                          color: Colors.redAccent, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: state.isFetchingUrl ? null : _fetchFromUrl,
+              icon: state.isFetchingUrl
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.download_rounded),
+              label: Text(
+                state.isFetchingUrl ? 'Fetching...' : 'Fetch Playlist',
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.fallbackAccent,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor:
+                    AppTheme.fallbackAccent.withValues(alpha: 0.5),
+                disabledForegroundColor: Colors.white70,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              'Requires Amazon Prime account',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: AppTheme.onDarkSecondary.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManualTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -129,7 +393,7 @@ class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen> {
           TextField(
             controller: _tracksController,
             style: const TextStyle(color: AppTheme.onDark, fontSize: 13),
-            maxLines: 15,
+            maxLines: 12,
             decoration: InputDecoration(
               hintText:
                   'Arijit Singh - Tum Hi Ho\nAP Dhillon - Brown Munde\nDua Lipa - Levitating\n...',
@@ -146,7 +410,7 @@ class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Tip: Copy your playlist from Amazon Music, Spotify, or any music app and paste here.',
+            'Tip: Copy your track list from Amazon Music, Spotify, or any music app and paste here.',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 12,
               color: AppTheme.onDarkSecondary.withValues(alpha: 0.7),
@@ -159,7 +423,7 @@ class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen> {
             height: 50,
             child: ElevatedButton.icon(
               onPressed:
-                  _tracksController.text.trim().isEmpty ? null : _parse,
+                  _tracksController.text.trim().isEmpty ? null : _parseManual,
               icon: const Icon(Icons.search_rounded),
               label: Text(
                 'Find on YouTube',
@@ -193,7 +457,7 @@ class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: state.tracks.length,
             itemBuilder: (context, index) =>
-                _buildTrackTile(state.tracks[index], index),
+                _buildTrackTile(state.tracks[index]),
           ),
         ),
         _buildBottomBar(state),
@@ -216,6 +480,19 @@ class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen> {
       ),
       child: Column(
         children: [
+          if (state.playlistName != null &&
+              state.playlistName != 'Imported Playlist')
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                state.playlistName!,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.onDark,
+                ),
+              ),
+            ),
           Row(
             children: [
               _StatChip(
@@ -256,7 +533,7 @@ class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen> {
     );
   }
 
-  Widget _buildTrackTile(ImportTrack track, int index) {
+  Widget _buildTrackTile(ImportTrack track) {
     final IconData icon;
     final Color iconColor;
 
@@ -331,7 +608,7 @@ class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen> {
               child: ElevatedButton.icon(
                 onPressed: _startMatching,
                 icon: const Icon(Icons.play_arrow_rounded),
-                label: const Text('Start Matching'),
+                label: const Text('Match on YouTube'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.fallbackAccent,
                   foregroundColor: Colors.white,
