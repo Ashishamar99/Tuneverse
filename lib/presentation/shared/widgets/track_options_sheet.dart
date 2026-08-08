@@ -277,6 +277,54 @@ class _TrackOptionsSheet extends ConsumerWidget {
     // The search will be triggered by setting the query
   }
 
+  void _showCreatePlaylistAndAdd(BuildContext screenContext, Track track) {
+    final controller = TextEditingController();
+    showDialog(
+      context: screenContext,
+      builder: (dialogCtx) => Consumer(
+        builder: (_, dialogRef, __) => AlertDialog(
+          backgroundColor: AppTheme.surfaceElevated,
+          title: const Text('New Playlist',
+              style: TextStyle(color: AppTheme.onDark)),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            style: const TextStyle(color: AppTheme.onDark),
+            decoration: const InputDecoration(hintText: 'Playlist name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final name = controller.text.trim();
+                if (name.isNotEmpty) {
+                  final playlist =
+                      await dialogRef.read(createPlaylistProvider)(name);
+                  await dialogRef.read(addToPlaylistProvider)(
+                      playlist.id, track);
+                  if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                  if (screenContext.mounted) {
+                    ScaffoldMessenger.of(screenContext).showSnackBar(
+                      SnackBar(
+                        content: Text('Added to "$name"'),
+                        backgroundColor: Colors.green.shade700,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showPlaylistPicker(
       BuildContext screenContext, WidgetRef ref, Track track) {
     showModalBottomSheet(
@@ -305,46 +353,59 @@ class _TrackOptionsSheet extends ConsumerWidget {
                       const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Text('Error: $e'),
                   data: (items) {
-                    if (items.isEmpty) {
-                      return const Text(
-                          'No playlists yet. Create one in Library.',
-                          style: TextStyle(color: AppTheme.onDarkSecondary));
-                    }
                     return Column(
                       mainAxisSize: MainAxisSize.min,
-                      children: items
-                          .map((pl) => ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: const Icon(
-                                    Icons.playlist_add_rounded,
-                                    color: AppTheme.onDarkSecondary),
-                                title: Text(pl.name,
-                                    style: const TextStyle(
-                                        color: AppTheme.onDark)),
-                                subtitle: Text('${pl.trackIds.length} tracks',
-                                    style: const TextStyle(
-                                        color: AppTheme.onDarkSecondary,
-                                        fontSize: 12)),
-                                onTap: () async {
-                                  await sheetRef.read(addToPlaylistProvider)(
-                                      pl.id, track);
-                                  if (ctx.mounted) Navigator.pop(ctx);
-                                  if (screenContext.mounted) {
-                                    ScaffoldMessenger.of(screenContext)
-                                        .showSnackBar(
-                                      SnackBar(
-                                        content:
-                                            Text('Added to ${pl.name}'),
-                                        backgroundColor:
-                                            Colors.green.shade700,
-                                        duration:
-                                            const Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
-                              ))
-                          .toList(),
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.add_rounded,
+                              color: AppTheme.onDark),
+                          title: const Text('Create New Playlist',
+                              style: TextStyle(
+                                  color: AppTheme.onDark,
+                                  fontWeight: FontWeight.w600)),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            _showCreatePlaylistAndAdd(
+                                screenContext, track);
+                          },
+                        ),
+                        const Divider(
+                            height: 1, color: AppTheme.surface),
+                        ...items.map((pl) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(
+                                  Icons.playlist_add_rounded,
+                                  color: AppTheme.onDarkSecondary),
+                              title: Text(pl.name,
+                                  style: const TextStyle(
+                                      color: AppTheme.onDark)),
+                              subtitle: Text(
+                                  '${pl.trackIds.length} tracks',
+                                  style: const TextStyle(
+                                      color: AppTheme.onDarkSecondary,
+                                      fontSize: 12)),
+                              onTap: () async {
+                                await sheetRef
+                                    .read(addToPlaylistProvider)(
+                                        pl.id, track);
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                if (screenContext.mounted) {
+                                  ScaffoldMessenger.of(screenContext)
+                                      .showSnackBar(
+                                    SnackBar(
+                                      content:
+                                          Text('Added to ${pl.name}'),
+                                      backgroundColor:
+                                          Colors.green.shade700,
+                                      duration:
+                                          const Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
+                            )),
+                      ],
                     );
                   },
                 ),

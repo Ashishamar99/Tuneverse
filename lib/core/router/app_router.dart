@@ -53,6 +53,13 @@ final appRouter = GoRouter(
           path: AppRoutes.library,
           builder: (context, state) => const LibraryScreen(),
         ),
+        GoRoute(
+          path: '/playlist/:id',
+          builder: (context, state) {
+            final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+            return PlaylistDetailScreen(playlistId: id);
+          },
+        ),
       ],
     ),
     GoRoute(
@@ -103,14 +110,6 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
         return PlaylistEditScreen(playlistId: id);
-      },
-    ),
-    GoRoute(
-      parentNavigatorKey: _rootNavigatorKey,
-      path: '/playlist/:id',
-      builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-        return PlaylistDetailScreen(playlistId: id);
       },
     ),
     // Deep link handler for universal link resolver

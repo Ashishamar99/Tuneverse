@@ -11,7 +11,6 @@ import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/core/theme/default_art.dart';
 import 'package:tuneverse/data/models/playlist_entity.dart';
 import 'package:tuneverse/domain/entities/track.dart';
-import 'package:tuneverse/presentation/shared/widgets/mini_player.dart';
 import 'package:tuneverse/presentation/shared/widgets/track_options_sheet.dart';
 
 final _playlistEntityProvider =
@@ -97,8 +96,9 @@ class PlaylistDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      bottomNavigationBar: const SafeArea(child: MiniPlayer()),
-      body: CustomScrollView(
+      body: SafeArea(
+        top: false,
+        child: CustomScrollView(
         slivers: [
           SliverAppBar(
             backgroundColor: AppTheme.background,
@@ -183,12 +183,12 @@ class PlaylistDetailScreen extends ConsumerWidget {
                     .state = sort.toggleDirection(),
                 onPlay: tracks.isEmpty
                     ? null
-                    : () => _playFrom(ref, context, tracks,
+                    : () => _playFrom(ref, context, _sorted(tracks, sort),
                         lastPlayedSourceId: lastPlayedSourceId),
                 onShuffle: tracks.isEmpty
                     ? null
                     : () =>
-                        _playFrom(ref, context, tracks, shuffle: true),
+                        _playFrom(ref, context, _sorted(tracks, sort), shuffle: true),
               ),
             ),
           ),
@@ -234,6 +234,7 @@ class PlaylistDetailScreen extends ConsumerWidget {
             },
           ),
         ],
+        ),
       ),
     );
   }

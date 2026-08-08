@@ -12,6 +12,7 @@ class ScaffoldWithNav extends StatelessWidget {
     final location = GoRouterState.of(context).uri.toString();
     if (location.startsWith(AppRoutes.search)) return 1;
     if (location.startsWith(AppRoutes.library)) return 2;
+    if (location.startsWith('/playlist')) return 2;
     return 0;
   }
 
