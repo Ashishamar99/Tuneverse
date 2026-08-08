@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuneverse/core/constants/app_constants.dart';
 import 'package:tuneverse/core/di/favorites_provider.dart';
+import 'package:tuneverse/core/di/local_providers.dart';
 import 'package:tuneverse/core/di/resolver_providers.dart';
 import 'package:tuneverse/core/di/search_history_provider.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
@@ -12,7 +13,10 @@ import 'package:tuneverse/core/theme/default_art.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/presentation/shared/widgets/track_options_sheet.dart';
 
+enum _SearchMode { youtube, local }
+
 final _loadingTrackIdProvider = StateProvider<String?>((ref) => null);
+final _searchModeProvider = StateProvider((_) => _SearchMode.youtube);
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -49,6 +53,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final mode = ref.watch(_searchModeProvider);
+    final accent = Theme.of(context).colorScheme.primary;
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
@@ -61,7 +68,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 onChanged: _onSearchChanged,
                 style: const TextStyle(color: AppTheme.onDark),
                 decoration: InputDecoration(
-                  hintText: 'Search songs, artists...',
+                  hintText: mode == _SearchMode.youtube
+                      ? 'Search songs, artists...'
+                      : 'Search local files...',
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: _query.isNotEmpty
                       ? IconButton(
@@ -75,6 +84,31 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  _ModeChip(
+                    label: 'YouTube',
+                    icon: Icons.play_circle_outline_rounded,
+                    selected: mode == _SearchMode.youtube,
+                    accent: accent,
+                    onTap: () => ref.read(_searchModeProvider.notifier).state =
+                        _SearchMode.youtube,
+                  ),
+                  const SizedBox(width: 8),
+                  _ModeChip(
+                    label: 'Local',
+                    icon: Icons.folder_rounded,
+                    selected: mode == _SearchMode.local,
+                    accent: accent,
+                    onTap: () => ref.read(_searchModeProvider.notifier).state =
+                        _SearchMode.local,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
             Expanded(
               child: _query.isEmpty
                   ? _RecentSearches(
@@ -85,7 +119,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     )
                   : _isUrl(_query)
                       ? _LinkResolver(url: _query)
-                      : _SearchResults(query: _query),
+                      : mode == _SearchMode.local
+                          ? _LocalSearchResults(query: _query)
+                          : _SearchResults(query: _query),
             ),
           ],
         ),
@@ -178,6 +214,94 @@ class _SearchResults extends ConsumerWidget {
   }
 }
 
+class _LocalSearchResults extends ConsumerWidget {
+  final String query;
+  const _LocalSearchResults({required this.query});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final results = ref.watch(localSearchProvider(query));
+
+    return results.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Center(
+        child: Text(
+          'Search failed: $error',
+          style: const TextStyle(color: AppTheme.onDarkSecondary),
+          textAlign: TextAlign.center,
+        ),
+      ),
+      data: (tracks) {
+        if (tracks.isEmpty) {
+          return const Center(
+            child: Text(
+              'No local files found',
+              style: TextStyle(color: AppTheme.onDarkSecondary),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          itemCount: tracks.length,
+          itemBuilder: (context, index) =>
+              _TrackTile(track: tracks[index], isLocal: true),
+        );
+      },
+    );
+  }
+}
+
+class _ModeChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final Color accent;
+  final VoidCallback onTap;
+
+  const _ModeChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.accent,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? accent : AppTheme.onDarkSecondary.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16,
+                color: selected ? accent : AppTheme.onDarkSecondary),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                color: selected ? accent : AppTheme.onDarkSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _RecentSearches extends ConsumerWidget {
   final void Function(String) onTap;
   const _RecentSearches({required this.onTap});
@@ -237,7 +361,8 @@ class _RecentSearches extends ConsumerWidget {
 
 class _TrackTile extends ConsumerWidget {
   final Track track;
-  const _TrackTile({required this.track});
+  final bool isLocal;
+  const _TrackTile({required this.track, this.isLocal = false});
 
   String _formatDuration(int? ms) {
     if (ms == null) return '';
@@ -343,18 +468,24 @@ class _TrackTile extends ConsumerWidget {
       ),
       onTap: () async {
         ref.read(_loadingTrackIdProvider.notifier).state = track.sourceId;
-        await ref.read(playTrackProvider)(track);
+        if (isLocal) {
+          await ref.read(playLocalTrackProvider)(track);
+        } else {
+          await ref.read(playTrackProvider)(track);
+        }
         if (context.mounted) {
           ref.read(_loadingTrackIdProvider.notifier).state = null;
         }
-        final error = ref.read(playbackErrorProvider);
-        if (error != null && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Playback failed: $error'),
-              backgroundColor: Colors.red.shade800,
-            ),
-          );
+        if (!isLocal) {
+          final error = ref.read(playbackErrorProvider);
+          if (error != null && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Playback failed: $error'),
+                backgroundColor: Colors.red.shade800,
+              ),
+            );
+          }
         }
       },
       onLongPress: () => showTrackOptions(context, ref, track),

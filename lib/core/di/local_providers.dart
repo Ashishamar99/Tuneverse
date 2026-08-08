@@ -27,6 +27,18 @@ final localTracksProvider = FutureProvider<List<Track>>((ref) async {
   return source.scanDevice();
 });
 
+final localSearchProvider =
+    FutureProvider.family<List<Track>, String>((ref, query) async {
+  final tracks = await ref.watch(localTracksProvider.future);
+  if (query.trim().isEmpty) return [];
+  final q = query.toLowerCase();
+  return tracks.where((t) {
+    return t.title.toLowerCase().contains(q) ||
+        t.artist.toLowerCase().contains(q) ||
+        (t.album?.toLowerCase().contains(q) ?? false);
+  }).toList();
+});
+
 final playLocalTrackProvider = Provider((ref) {
   return (Track track) async {
     final handler = ref.read(audioHandlerProvider);

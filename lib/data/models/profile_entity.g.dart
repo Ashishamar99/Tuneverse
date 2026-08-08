@@ -32,13 +32,18 @@ const ProfileEntitySchema = CollectionSchema(
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
-    r'isActive': PropertySchema(
+    r'favoriteSourceIds': PropertySchema(
       id: 3,
+      name: r'favoriteSourceIds',
+      type: IsarType.stringList,
+    ),
+    r'isActive': PropertySchema(
+      id: 4,
       name: r'isActive',
       type: IsarType.bool,
     ),
     r'name': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'name',
       type: IsarType.string,
     )
@@ -64,6 +69,13 @@ int _profileEntityEstimateSize(
 ) {
   var bytesCount = offsets.last;
   bytesCount += 3 + object.avatarEmoji.length * 3;
+  bytesCount += 3 + object.favoriteSourceIds.length * 3;
+  {
+    for (var i = 0; i < object.favoriteSourceIds.length; i++) {
+      final value = object.favoriteSourceIds[i];
+      bytesCount += value.length * 3;
+    }
+  }
   bytesCount += 3 + object.name.length * 3;
   return bytesCount;
 }
@@ -77,8 +89,9 @@ void _profileEntitySerialize(
   writer.writeLong(offsets[0], object.accentColorValue);
   writer.writeString(offsets[1], object.avatarEmoji);
   writer.writeDateTime(offsets[2], object.createdAt);
-  writer.writeBool(offsets[3], object.isActive);
-  writer.writeString(offsets[4], object.name);
+  writer.writeStringList(offsets[3], object.favoriteSourceIds);
+  writer.writeBool(offsets[4], object.isActive);
+  writer.writeString(offsets[5], object.name);
 }
 
 ProfileEntity _profileEntityDeserialize(
@@ -91,9 +104,10 @@ ProfileEntity _profileEntityDeserialize(
   object.accentColorValue = reader.readLong(offsets[0]);
   object.avatarEmoji = reader.readString(offsets[1]);
   object.createdAt = reader.readDateTime(offsets[2]);
+  object.favoriteSourceIds = reader.readStringList(offsets[3]) ?? [];
   object.id = id;
-  object.isActive = reader.readBool(offsets[3]);
-  object.name = reader.readString(offsets[4]);
+  object.isActive = reader.readBool(offsets[4]);
+  object.name = reader.readString(offsets[5]);
   return object;
 }
 
@@ -111,8 +125,10 @@ P _profileEntityDeserializeProp<P>(
     case 2:
       return (reader.readDateTime(offset)) as P;
     case 3:
-      return (reader.readBool(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 4:
+      return (reader.readBool(offset)) as P;
+    case 5:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -460,6 +476,233 @@ extension ProfileEntityQueryFilter
         upper: upper,
         includeUpper: includeUpper,
       ));
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsElementEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'favoriteSourceIds',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'favoriteSourceIds',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'favoriteSourceIds',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'favoriteSourceIds',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsElementStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'favoriteSourceIds',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsElementEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'favoriteSourceIds',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsElementContains(String value,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'favoriteSourceIds',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsElementMatches(String pattern,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'favoriteSourceIds',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'favoriteSourceIds',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'favoriteSourceIds',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'favoriteSourceIds',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'favoriteSourceIds',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'favoriteSourceIds',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'favoriteSourceIds',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'favoriteSourceIds',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<ProfileEntity, ProfileEntity, QAfterFilterCondition>
+      favoriteSourceIdsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'favoriteSourceIds',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
     });
   }
 
@@ -839,6 +1082,13 @@ extension ProfileEntityQueryWhereDistinct
     });
   }
 
+  QueryBuilder<ProfileEntity, ProfileEntity, QDistinct>
+      distinctByFavoriteSourceIds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'favoriteSourceIds');
+    });
+  }
+
   QueryBuilder<ProfileEntity, ProfileEntity, QDistinct> distinctByIsActive() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isActive');
@@ -877,6 +1127,13 @@ extension ProfileEntityQueryProperty
   QueryBuilder<ProfileEntity, DateTime, QQueryOperations> createdAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'createdAt');
+    });
+  }
+
+  QueryBuilder<ProfileEntity, List<String>, QQueryOperations>
+      favoriteSourceIdsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'favoriteSourceIds');
     });
   }
 

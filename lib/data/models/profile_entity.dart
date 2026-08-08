@@ -11,4 +11,5 @@ class ProfileEntity {
   late int accentColorValue;
   late DateTime createdAt;
   bool isActive = false;
+  List<String> favoriteSourceIds = [];
 }

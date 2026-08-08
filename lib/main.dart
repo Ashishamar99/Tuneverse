@@ -13,6 +13,8 @@ import 'package:tuneverse/core/di/youtube_providers.dart';
 import 'package:tuneverse/core/router/app_router.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/data/models/playlist_entity.dart';
+import 'package:tuneverse/data/models/profile_entity.dart';
+import 'package:tuneverse/data/models/track_entity.dart';
 import 'package:tuneverse/data/repositories/profile_repository.dart';
 import 'package:tuneverse/domain/entities/track.dart';
 import 'package:tuneverse/presentation/onboarding/permission_screen.dart';
@@ -48,6 +50,21 @@ void main() async {
       }
       await isar.playlistEntitys.putAll(stalePlayists);
     });
+  }
+
+  // Migrate legacy isFavorite flags to the active profile's favoriteSourceIds
+  if (activeProfile.favoriteSourceIds.isEmpty) {
+    final legacyFavs = await isar.trackEntitys
+        .filter()
+        .isFavoriteEqualTo(true)
+        .findAll();
+    if (legacyFavs.isNotEmpty) {
+      activeProfile.favoriteSourceIds =
+          legacyFavs.map((e) => e.sourceId).toList();
+      await isar.writeTxn(() async {
+        await isar.profileEntitys.put(activeProfile);
+      });
+    }
   }
 
   runApp(

@@ -2,8 +2,10 @@ import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tuneverse/core/di/providers.dart';
 import 'package:tuneverse/core/di/youtube_providers.dart';
+import 'package:tuneverse/core/router/app_router.dart';
 import 'package:tuneverse/core/theme/app_theme.dart';
 import 'package:tuneverse/core/theme/default_art.dart';
 import 'package:tuneverse/data/platform/audio_handler.dart';
@@ -31,7 +33,7 @@ class QueueScreen extends ConsumerWidget {
               handler.clearQueue();
               ref.read(nowPlayingProvider.notifier).state = null;
               Navigator.pop(ctx);
-              Navigator.pop(context);
+              context.go(AppRoutes.home);
             },
             child: const Text('Clear',
                 style: TextStyle(color: Colors.redAccent)),

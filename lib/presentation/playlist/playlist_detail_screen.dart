@@ -2,6 +2,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tuneverse/core/di/playlist_providers.dart';
 import 'package:tuneverse/core/di/profile_providers.dart';
 import 'package:tuneverse/core/di/providers.dart';
@@ -19,21 +20,69 @@ final _playlistEntityProvider =
   return isar.playlistEntitys.get(playlistId);
 });
 
-enum PlaylistSort { added, az }
+enum PlaylistSortField { added, az }
+
+class PlaylistSort {
+  final PlaylistSortField field;
+  final bool ascending;
+  const PlaylistSort({this.field = PlaylistSortField.added, this.ascending = true});
+
+  PlaylistSort toggleDirection() => PlaylistSort(field: field, ascending: !ascending);
+  PlaylistSort withField(PlaylistSortField f) => PlaylistSort(field: f, ascending: ascending);
+}
 
 final _playlistSortProvider =
-    StateProvider.family<PlaylistSort, int>((ref, _) => PlaylistSort.added);
+    StateProvider.family<PlaylistSort, int>((ref, _) => const PlaylistSort());
 
 class PlaylistDetailScreen extends ConsumerWidget {
   final int playlistId;
   const PlaylistDetailScreen({super.key, required this.playlistId});
 
   List<Track> _sorted(List<Track> tracks, PlaylistSort sort) {
-    if (sort == PlaylistSort.az) {
-      return [...tracks]..sort(
-          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    final list = [...tracks];
+    switch (sort.field) {
+      case PlaylistSortField.az:
+        list.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+      case PlaylistSortField.added:
+        break;
     }
-    return tracks;
+    if (!sort.ascending) list.reversed;
+    return sort.ascending ? list : list.reversed.toList();
+  }
+
+  void _showRenameDialog(BuildContext context, WidgetRef ref, PlaylistEntity pl) {
+    final controller = TextEditingController(text: pl.name);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceElevated,
+        title: const Text('Rename Playlist',
+            style: TextStyle(color: AppTheme.onDark)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: AppTheme.onDark),
+          decoration: const InputDecoration(hintText: 'Playlist name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                ref.read(renamePlaylistProvider)(pl.id, name);
+                ref.invalidate(_playlistEntityProvider(pl.id));
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -58,6 +107,62 @@ class PlaylistDetailScreen extends ConsumerWidget {
             title: Text(entity?.name ?? 'Playlist',
                 style:
                     const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+            actions: [
+              if (entity != null)
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert_rounded,
+                      color: AppTheme.onDarkSecondary),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'rename':
+                        _showRenameDialog(context, ref, entity);
+                      case 'edit_order':
+                        context.push('/playlist/$playlistId/edit');
+                      case 'delete':
+                        ref.read(deletePlaylistProvider)(playlistId);
+                        context.pop();
+                    }
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      value: 'rename',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_rounded,
+                              color: AppTheme.onDarkSecondary, size: 20),
+                          SizedBox(width: 12),
+                          Text('Rename',
+                              style: TextStyle(color: AppTheme.onDark)),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'edit_order',
+                      child: Row(
+                        children: [
+                          Icon(Icons.reorder_rounded,
+                              color: AppTheme.onDarkSecondary, size: 20),
+                          SizedBox(width: 12),
+                          Text('Edit Order',
+                              style: TextStyle(color: AppTheme.onDark)),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline_rounded,
+                              color: Colors.redAccent, size: 20),
+                          SizedBox(width: 12),
+                          Text('Delete',
+                              style: TextStyle(color: Colors.redAccent)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+            ],
           ),
           tracksAsync.when(
             loading: () =>
@@ -73,6 +178,9 @@ class PlaylistDetailScreen extends ConsumerWidget {
                 onSortChanged: (s) => ref
                     .read(_playlistSortProvider(playlistId).notifier)
                     .state = s,
+                onToggleDirection: () => ref
+                    .read(_playlistSortProvider(playlistId).notifier)
+                    .state = sort.toggleDirection(),
                 onPlay: tracks.isEmpty
                     ? null
                     : () => _playFrom(ref, context, tracks,
@@ -189,6 +297,7 @@ class _PlaylistHeader extends StatelessWidget {
   final String? profileName;
   final PlaylistSort currentSort;
   final ValueChanged<PlaylistSort> onSortChanged;
+  final VoidCallback onToggleDirection;
   final VoidCallback? onPlay;
   final VoidCallback? onShuffle;
 
@@ -198,6 +307,7 @@ class _PlaylistHeader extends StatelessWidget {
     this.profileName,
     required this.currentSort,
     required this.onSortChanged,
+    required this.onToggleDirection,
     this.onPlay,
     this.onShuffle,
   });
@@ -315,14 +425,20 @@ class _PlaylistHeader extends StatelessWidget {
               children: [
                 _SortChip(
                   label: 'Date Added',
-                  selected: currentSort == PlaylistSort.added,
-                  onTap: () => onSortChanged(PlaylistSort.added),
+                  selected: currentSort.field == PlaylistSortField.added,
+                  onTap: () => onSortChanged(currentSort.withField(PlaylistSortField.added)),
                 ),
                 const SizedBox(width: 8),
                 _SortChip(
                   label: 'A–Z',
-                  selected: currentSort == PlaylistSort.az,
-                  onTap: () => onSortChanged(PlaylistSort.az),
+                  selected: currentSort.field == PlaylistSortField.az,
+                  onTap: () => onSortChanged(currentSort.withField(PlaylistSortField.az)),
+                ),
+                const SizedBox(width: 8),
+                _SortChip(
+                  label: currentSort.ascending ? '↑' : '↓',
+                  selected: true,
+                  onTap: onToggleDirection,
                 ),
               ],
             ),

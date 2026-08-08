@@ -386,11 +386,13 @@ class AppTheme {
       ),
 
       scrollbarTheme: ScrollbarThemeData(
-        thumbColor: WidgetStateProperty.all(Colors.white.withValues(alpha: 0.2)),
-        trackColor: WidgetStateProperty.all(Colors.transparent),
+        thumbColor: WidgetStateProperty.all(accentColor.withValues(alpha: 0.5)),
+        trackColor: WidgetStateProperty.all(Colors.white.withValues(alpha: 0.05)),
         radius: const Radius.circular(4),
-        thickness: WidgetStateProperty.all(3),
+        thickness: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.dragged) ? 6.0 : 4.0),
         interactive: true,
+        thumbVisibility: WidgetStateProperty.all(true),
       ),
 
       tooltipTheme: TooltipThemeData(
