@@ -5,8 +5,7 @@ Extracts tracks from an Amazon Music playlist using the amz library.
 Trigger: HTTP POST
 Input: {
   "playlistId": "...",
-  "accessToken": "...",
-  "apiUrl": "https://amz.dezalty.com" (optional, default proxy)
+  "accessToken": "..."
 }
 Output: Creates/updates import_jobs and import_progress documents.
 
@@ -47,7 +46,6 @@ def main(context):
 
     playlist_id = body.get("playlistId")
     access_token = body.get("accessToken", "")
-    api_url = body.get("apiUrl", DEFAULT_API_URL)
     user_id = context.req.headers.get("x-appwrite-user-id")
 
     if not playlist_id:
@@ -100,7 +98,7 @@ def main(context):
 
     try:
         playlist_data = _extract_playlist(
-            api_url, access_token, playlist_id, db, progress_id
+            access_token, playlist_id, db, progress_id
         )
 
         db.update_document(
@@ -131,11 +129,11 @@ def main(context):
         return context.res.json({"error": str(e), "jobId": job_id}, 500)
 
 
-def _extract_playlist(api_url, access_token, playlist_id, db, progress_id):
+def _extract_playlist(access_token, playlist_id, db, progress_id):
     """Extract a single playlist from Amazon Music using the amz library."""
     from amz.api import API
 
-    api = API(api_url, access_token=access_token)
+    api = API(DEFAULT_API_URL, access_token=access_token)
     result = api.get_playlist(playlist_id)
 
     playlist_name = getattr(result, "title", None) or getattr(result, "name", "Amazon Playlist")
