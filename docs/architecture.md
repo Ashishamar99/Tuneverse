@@ -227,6 +227,30 @@ For YouTube streams: `audio_visualizer` accepts the stream URL directly. For loc
 
 ---
 
+## Backend — Appwrite Cloud
+
+TuneVerse uses Appwrite Cloud (free tier) as a lightweight backend for two features:
+
+1. **Cloud Backup/Sync** — playlists, favorites, and profile data persisted to Appwrite Database, auto-restored on fresh install with Google Sign-In
+2. **Playlist Converter** — import playlists from Amazon Music (and later Spotify) via Appwrite Functions
+
+See `docs/learnings/10-appwrite-backend-architecture.md` for the full schema, data flows, and hosting details.
+
+```
+┌────────────────────────────────────────────────┐
+│              Appwrite Cloud                    │
+│                                                │
+│  Auth ── Google Sign-In                        │
+│  DB   ── backups, import_jobs, import_progress │
+│  Fn   ── convert-amazon, backup-cleanup        │
+│  RT   ── WebSocket progress updates            │
+└────────────────────────────────────────────────┘
+```
+
+Backend code lives in `backend/appwrite/` in this repo.
+
+---
+
 ## Secrets Management
 
 No secrets in source code. Ever.

@@ -1,0 +1,91 @@
+{
+  "$schema": "https://appwrite.io/schemas/appwrite.json",
+  "projectId": "",
+  "projectName": "TuneVerse",
+  "functions": [
+    {
+      "$id": "convert-amazon",
+      "name": "Convert Amazon Music Playlists",
+      "runtime": "python-3.12",
+      "execute": ["users"],
+      "events": [],
+      "schedule": "",
+      "timeout": 300,
+      "enabled": true,
+      "logging": true,
+      "entrypoint": "main.py",
+      "path": "functions/convert-amazon"
+    },
+    {
+      "$id": "backup-cleanup",
+      "name": "Cleanup Expired Import Jobs",
+      "runtime": "python-3.12",
+      "execute": [],
+      "events": [],
+      "schedule": "0 3 * * *",
+      "timeout": 60,
+      "enabled": true,
+      "logging": true,
+      "entrypoint": "main.py",
+      "path": "functions/backup-cleanup"
+    }
+  ],
+  "databases": [
+    {
+      "$id": "tuneverse",
+      "name": "TuneVerse",
+      "collections": [
+        {
+          "$id": "backups",
+          "name": "User Backups",
+          "documentSecurity": true,
+          "attributes": [
+            { "key": "userId", "type": "string", "size": 64, "required": true },
+            { "key": "profiles", "type": "string", "size": 65536, "required": true },
+            { "key": "playlists", "type": "string", "size": 1048576, "required": true },
+            { "key": "favorites", "type": "string", "size": 262144, "required": true },
+            { "key": "settings", "type": "string", "size": 4096, "required": false },
+            { "key": "updatedAt", "type": "string", "size": 64, "required": true }
+          ],
+          "indexes": [
+            { "key": "idx_userId", "type": "unique", "attributes": ["userId"] }
+          ]
+        },
+        {
+          "$id": "import_jobs",
+          "name": "Import Jobs",
+          "documentSecurity": true,
+          "attributes": [
+            { "key": "userId", "type": "string", "size": 64, "required": true },
+            { "key": "source", "type": "string", "size": 32, "required": true },
+            { "key": "status", "type": "string", "size": 32, "required": true },
+            { "key": "playlists", "type": "string", "size": 1048576, "required": true },
+            { "key": "createdAt", "type": "string", "size": 64, "required": true },
+            { "key": "expiresAt", "type": "string", "size": 64, "required": true }
+          ],
+          "indexes": [
+            { "key": "idx_userId", "type": "key", "attributes": ["userId"] },
+            { "key": "idx_expiresAt", "type": "key", "attributes": ["expiresAt"] }
+          ]
+        },
+        {
+          "$id": "import_progress",
+          "name": "Import Progress",
+          "documentSecurity": true,
+          "attributes": [
+            { "key": "userId", "type": "string", "size": 64, "required": true },
+            { "key": "jobId", "type": "string", "size": 64, "required": true },
+            { "key": "currentPlaylist", "type": "string", "size": 256, "required": false },
+            { "key": "processedTracks", "type": "integer", "required": true },
+            { "key": "totalTracks", "type": "integer", "required": true },
+            { "key": "lastMatchedTrack", "type": "string", "size": 512, "required": false },
+            { "key": "updatedAt", "type": "string", "size": 64, "required": true }
+          ],
+          "indexes": [
+            { "key": "idx_jobId", "type": "unique", "attributes": ["jobId"] }
+          ]
+        }
+      ]
+    }
+  ]
+}
