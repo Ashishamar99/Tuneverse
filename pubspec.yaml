@@ -63,6 +63,9 @@ dependencies:
   # Fonts
   google_fonts: ^6.2.1
 
+  # Cloud backend
+  appwrite: ^25.4.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
